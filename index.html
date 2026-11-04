@@ -37,7 +37,7 @@ body {
 
 .overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 14px; padding: 24px 20px; box-sizing: border-box; text-align: center;
+  justify-content: safe center; overflow-y: auto; gap: 14px; padding: 24px 20px; box-sizing: border-box; text-align: center;
   background: linear-gradient(180deg, rgb(21 23 28 / .92), rgb(21 23 28 / .97));
 }
 .brand { font-family: var(--display); font-size: clamp(30px, 9vw, 44px); line-height: 1; margin: 0; letter-spacing: .01em; color: var(--fg); text-wrap: balance; }
@@ -65,18 +65,27 @@ body {
 #endTitle { font-family: var(--display); font-size: 28px; margin: 0; color: var(--gold); text-wrap: balance; }
 #endReason { margin: 0; color: var(--muted); max-width: 300px; }
 
-#controls { display: flex; justify-content: space-between; gap: 8px; flex: none; }
-.ctl-group { display: flex; gap: 8px; }
+#controls { display: flex; justify-content: space-between; gap: 8px; flex: none; max-width: 100%; }
+.ctl-group { display: flex; gap: 8px; flex: 2; min-width: 0; }
+.ctl-group .ctl { flex: 1; min-width: 0; }
 .ctl {
   font-family: var(--display); font-size: 15px; color: var(--fg); background: var(--panel);
   border: 1px solid var(--line); border-radius: 14px; width: 62px; height: 62px; cursor: pointer;
   display: grid; place-items: center; padding: 0; touch-action: none;
 }
 .ctl.on { background: var(--line); }
-.ctl.gas { background: var(--green); border-color: #3fae63; width: 70px; }
-.ctl.brake { background: var(--red); border-color: #ee4950; width: 70px; }
-.ctl.horn { font-size: 11px; color: var(--gold); width: 58px; }
+.ctl.gas { background: var(--green); border-color: #3fae63; }
+.ctl.brake { background: var(--red); border-color: #ee4950; }
+.ctl.horn { font-size: 10px; color: var(--gold); width: 58px; flex: none; }
 .ctl.gas.on { background: #3fae63; } .ctl.brake.on { background: #ee4950; }
+@media (max-height: 760px) {
+  .overlay { gap: 10px; padding-block: 14px; }
+  .brand { font-size: 30px; }
+  #sideBus { max-width: 240px; }
+  .howto { font-size: 12px; gap: 4px 10px; }
+  .ctl { height: 54px; }
+}
+@media (max-height: 640px) { .howto, #sideBus { display: none; } }
 @media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
 </style>
 
@@ -87,6 +96,10 @@ body {
     <section id="startScreen" class="overlay">
       <p class="tag">Şehirlerarası Otobüs Şoförü</p>
       <h1 class="brand"><span>ZAFER</span> TURİZM</h1>
+      <div class="btn-row">
+        <button id="roamBtn" class="btn alt" type="button">Şehirde Gez</button>
+        <button id="startBtn" class="btn" type="button">Sefere Başla</button>
+      </div>
       <canvas id="sideBus" width="680" height="260"></canvas>
       <dl class="howto">
         <dt>Sefer</dt><dd>İstanbul Boğazı'ndan geçip Gürbulak Sınır Kapısı'na: 1.625 km, 11 şehir.</dd>
@@ -94,10 +107,6 @@ body {
         <dt>Şehir</dt><dd>İstanbul'da serbest gez: Sultanahmet, Galata, Boğaz. Duraklardan yolcu topla.</dd>
         <dt>Mancınık</dt><dd>Sınır kapısında yolcuları mancınıkla fırlat, havada paraşütü aç.</dd>
       </dl>
-      <div class="btn-row">
-        <button id="startBtn" class="btn" type="button">Sefere Başla</button>
-        <button id="roamBtn" class="btn alt" type="button">Şehirde Gez</button>
-      </div>
       <p class="small" id="bestLine">Klavye: ← → direksiyon · ↑ gaz · ↓ fren · Boşluk korna · M harita · C kamera</p>
     </section>
 
@@ -205,7 +214,7 @@ function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   stage.style.width = (W * scale) + 'px';
   stage.style.height = (H * scale) + 'px';
-  controls.style.width = Math.max(W * scale, 300) + 'px';
+  controls.style.width = Math.min(app.clientWidth, Math.max(W * scale, 320)) + 'px';
   cvs.width = Math.round(W * scale * dpr);
   cvs.height = Math.round(H * scale * dpr);
   ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
