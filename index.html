@@ -51,6 +51,9 @@ body {
   font-family: var(--display); font-size: 18px; color: var(--fg); background: var(--red);
   border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer; box-shadow: 0 4px 0 #8f161c;
 }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+#catBtn { font-size: 14px; padding: 10px 18px; }
+.btn.alt { background: #1d4e89; box-shadow: 0 4px 0 #12325a; }
 .btn.ghost { background: var(--panel); box-shadow: 0 4px 0 #0c0d10; font-size: 14px; padding: 10px 20px; border: 1px solid var(--line); }
 .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8f161c; }
 .btn:focus-visible, .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
@@ -88,10 +91,13 @@ body {
       <dl class="howto">
         <dt>Sefer</dt><dd>İstanbul Boğazı'ndan geçip Gürbulak Sınır Kapısı'na: 1.625 km, 11 şehir.</dd>
         <dt>Durak</dt><dd>Sağ şeride geç, sarı cebin hizasında tam dur. Yolcular biner, bilet parası kasaya.</dd>
-        <dt>Korna</dt><dd>Önündeki araç şerit değiştirmeye çalışır.</dd>
-        <dt>Dikkat</dt><dd>Kaza hasar yapar, kaçan durak firma puanını düşürür.</dd>
+        <dt>Şehir</dt><dd>İstanbul'da serbest gez: Sultanahmet, Galata, Boğaz. Duraklardan yolcu topla.</dd>
+        <dt>Mancınık</dt><dd>Sınır kapısında yolcuları mancınıkla fırlat, havada paraşütü aç.</dd>
       </dl>
-      <button id="startBtn" class="btn" type="button">Sefere Başla</button>
+      <div class="btn-row">
+        <button id="startBtn" class="btn" type="button">Sefere Başla</button>
+        <button id="roamBtn" class="btn alt" type="button">Şehirde Gez</button>
+      </div>
       <p class="small" id="bestLine">Klavye: ← → direksiyon · ↑ gaz · ↓ fren · Boşluk korna · M harita · C kamera</p>
     </section>
 
@@ -100,15 +106,22 @@ body {
       <p id="endReason"></p>
       <canvas id="mapEnd" class="map" width="760" height="380"></canvas>
       <dl class="stats" id="endStats"></dl>
-      <button id="againBtn" class="btn" type="button">Yeni Sefer</button>
+      <div class="btn-row">
+        <button id="againBtn" class="btn" type="button">Tekrar Oyna</button>
+        <button id="menuBtn" class="btn ghost" type="button">Ana Menü</button>
+      </div>
     </section>
 
     <section id="pauseScreen" class="overlay" hidden>
       <h2 class="brand" style="font-size:30px">MOLA</h2>
       <canvas id="mapBig" class="map" width="760" height="380"></canvas>
       <p class="small" id="pauseInfo">Mola yerinde çay içiliyor…</p>
-      <button id="camBtn" class="btn ghost" type="button">Kamera: Arkadan</button>
       <button id="resumeBtn" class="btn" type="button">Devam Et</button>
+      <div class="btn-row">
+        <button id="catBtn" class="btn alt" type="button" hidden>Yolcuları Mancınığa Götür</button>
+        <button id="camBtn" class="btn ghost" type="button">Kamera: Arkadan</button>
+        <button id="quitBtn" class="btn ghost" type="button">Bitir</button>
+      </div>
     </section>
   </div>
 
@@ -238,11 +251,16 @@ const input = { left: false, right: false, gas: false, brake: false };
 const keyMap = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'gas', KeyW: 'gas', ArrowDown: 'brake', KeyS: 'brake' };
 window.addEventListener('keydown', e => {
   if (keyMap[e.code]) { input[keyMap[e.code]] = true; e.preventDefault(); }
-  if (e.code === 'Space' || e.code === 'KeyH') { if (running) honk(); e.preventDefault(); }
+  if (e.code === 'Space' || e.code === 'KeyH') {
+    e.preventDefault();
+    if (!running || paused) return;
+    if (G.mode === 'catapult') { if (K.proj && K.proj.state === 'fly') kChute(); else if (e.code === 'Space') kHeld = true; }
+    else honk();
+  }
   if (e.code === 'KeyP' || e.code === 'Escape' || e.code === 'KeyM') togglePause();
   if (e.code === 'KeyC') toggleCam();
 });
-window.addEventListener('keyup', e => { if (keyMap[e.code]) input[keyMap[e.code]] = false; });
+window.addEventListener('keyup', e => { if (keyMap[e.code]) input[keyMap[e.code]] = false; if (e.code === 'Space') kHeld = false; });
 function bindHold(id, key) {
   const el = document.getElementById(id);
   const on = e => { e.preventDefault(); input[key] = true; el.classList.add('on'); initAudio(); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
@@ -254,7 +272,7 @@ function bindHold(id, key) {
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 bindHold('cLeft', 'left'); bindHold('cRight', 'right'); bindHold('cGas', 'gas'); bindHold('cBrake', 'brake');
-document.getElementById('cHorn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); if (running) honk(); });
+document.getElementById('cHorn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); if (!running) return; if (G.mode === 'catapult') kChute(); else honk(); });
 
 // ---------- oyun durumu ----------
 let G = null, running = false, paused = false, last = 0;
@@ -276,8 +294,9 @@ function buildStops() {
   return stops;
 }
 
-function newGame() {
+function newGame(mode = 'route') {
   G = {
+    mode, launched: 0, r: null,
     dist: 0, speed: 0, x: LANES[2], camX: LX(LANES[2]) * 0.6, tilt: 0, roadOff: 0,
     money: 0, pax: 12, carried: 0, stars: 5, damage: 0,
     served: 0, missed: 0, crashes: 0, time: 0,
@@ -285,7 +304,12 @@ function newGame() {
     stops: buildStops(), si: 0, boardT: 0,
     toast: null, lastCity: 0, braking: false, doors: 0
   };
-  toast('İstanbul Otogarı\'ndan hareket! İyi yolculuklar.', 3);
+  if (mode === 'roam') {
+    CITY = buildCity();
+    G.pax = 0;
+    G.r = { x: 3 * CP + 45, z: 40, a: 0, camA: 0, speed: 0, doors: 0, inv: 0, near: null };
+    toast('İstanbul\'da serbest sürüş! Duraklardan yolcu topla.', 3);
+  } else toast('İstanbul Otogarı\'ndan hareket! İyi yolculuklar.', 3);
 }
 
 function toast(text, dur = 2.2, color = '#f3f1ec') { G.toast = { text, t: dur, max: dur, color }; }
@@ -359,6 +383,7 @@ function updateCars(dt) {
 function honk() {
   if (G.hornCd > 0) return;
   G.hornCd = 0.6; hornSound();
+  if (G.mode !== 'route') return;
   let n = 0;
   for (const c of G.cars) {
     if (c.y < BUS.y && c.y > BUS.y - 380 && Math.abs(c.x - G.x) < 60) {
@@ -380,8 +405,8 @@ function updateStops(dt) {
   if (aligned) {
     if (!s.arrived) {
       s.arrived = true;
-      s.alight = s.final ? G.pax : s.terminal ? Math.floor(G.pax * rand(0.4, 0.7)) : Math.floor(rand(0, Math.min(5, G.pax + 1)));
-      toast(s.final ? 'Türkiye sınırına vardın! Yolcular iniyor.' : s.terminal ? s.city + ' · İstanbul\'dan ' + Math.round(realKm(s.km)).toLocaleString('tr-TR') + ' km' : 'Durakta: kapılar açıldı', 2.2, '#f2c230');
+      s.alight = s.final ? 0 : s.terminal ? Math.floor(G.pax * rand(0.4, 0.7)) : Math.floor(rand(0, Math.min(5, G.pax + 1)));
+      toast(s.final ? 'Türkiye sınırına vardın! Yolcular mancınığa koşuyor…' : s.terminal ? s.city + ' · İstanbul\'dan ' + Math.round(realKm(s.km)).toLocaleString('tr-TR') + ' km' : 'Durakta: kapılar açıldı', 2.2, '#f2c230');
       beep(660, 0.12, 'triangle', 0.06); beep(520, 0.15, 'triangle', 0.06, 0.12);
     }
     G.boardT -= dt;
@@ -405,7 +430,7 @@ function updateStops(dt) {
       beep(220, 0.25, 'sawtooth', 0.05);
     }
     s.done = true; G.si++;
-    if (s.final) return endGame(true);
+    if (s.final) return startCatapult();
     if (G.stars <= 0) return endGame(false, 'Çok fazla durak kaçtı, yolcular şikâyet etti. Firma puanı sıfırlandı.');
   }
 }
@@ -415,11 +440,16 @@ function finishStop(s) {
   const bonus = s.terminal ? 400 : 100;
   G.money += bonus;
   toast((s.terminal ? 'Otogar' : 'Durak') + ' tamam! Dakiklik primi +' + money(bonus), 2, '#7be08f');
-  if (s.final) setTimeout(() => endGame(true), 600);
+  if (s.final) setTimeout(() => { if (running && G.mode === 'route') startCatapult(); }, 1200);
 }
 
 // ---------- güncelleme ----------
 function update(dt) {
+  if (G.mode === 'roam') { updateRoam(dt); tickFx(dt); }
+  else if (G.mode === 'catapult') { updateCat(dt); tickFx(dt); }
+  else updateRoute(dt);
+}
+function updateRoute(dt) {
   G.time += dt;
   const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   if (input.gas) G.speed += 28 * dt * (1 - G.speed / (MAXV + 25));
@@ -776,6 +806,7 @@ const MINI = { x: W - 118, y: 98, w: 108, h: 50 };
 function drawBigMap(id) {
   const c = document.getElementById(id), g = c.getContext('2d');
   g.clearRect(0, 0, c.width, c.height);
+  if (G && (G.mode === 'roam' || (G.mode === 'catapult' && K && K.from === 'roam'))) { g.fillStyle = '#15171c'; g.fillRect(0, 0, c.width, c.height); drawCityMap(g, 0, 0, c.width, c.height, true); return; }
   drawMap(g, 0, 0, c.width, c.height, true);
 }
 
@@ -1316,6 +1347,8 @@ function render3() {
 
 function render() {
   if (!G) { ctx.fillStyle = '#4c7536'; ctx.fillRect(0, 0, W, H); drawRoad(); return; }
+  if (G.mode === 'roam') { renderRoam(); drawHUDRoam(); return; }
+  if (G.mode === 'catapult') { renderCat(); drawHUDCat(); return; }
   ctx.save();
   if (G.shake > 0) ctx.translate(rand(-6, 6) * G.shake, rand(-6, 6) * G.shake);
   if (camMode === 'arka') render3();
@@ -1331,6 +1364,763 @@ function render() {
   drawHUD();
 }
 
+// =====================================================================
+// ŞEHİRDE GEZ — İstanbul'da serbest sürüş (dönebilen 3B kamera)
+// =====================================================================
+const CB = 420, CR = 180, CP = CB + CR, CN = 6, CEDGE = CN * CP;
+const RV = { F: 520, CAMH: 230, HZ: 210, ZN: 30, ZF: 4200, BACK: 330 };
+const PXM = 0.08; // 1 piksel ≈ 8 cm (otobüs 150 px ≈ 12 m)
+const FARE_CITY = 30;
+const cam = { x: 0, z: 0, c: 1, s: 0 };
+let CITY = null;
+
+function toCam(x, h, z) { const dx = x - cam.x, dz = z - cam.z; return [dx * cam.c - dz * cam.s, h, dx * cam.s + dz * cam.c]; }
+function projC(v) { const s = RV.F / v[2]; return [W / 2 + v[0] * s, RV.HZ + (RV.CAMH - v[1]) * s]; }
+function clipNear(vs) {
+  const out = [];
+  for (let i = 0; i < vs.length; i++) {
+    const a = vs[i], b = vs[(i + 1) % vs.length], ai = a[2] >= RV.ZN, bi = b[2] >= RV.ZN;
+    if (ai) out.push(a);
+    if (ai !== bi) { const t = (RV.ZN - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, RV.ZN]); }
+  }
+  return out;
+}
+function wpoly(pts, fill) {
+  let vs = pts.map(p => toCam(p[0], p[1], p[2]));
+  vs = clipNear(vs); if (vs.length < 3) return;
+  ctx.beginPath();
+  for (let i = 0; i < vs.length; i++) { const p = projC(vs[i]); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+const gquad = (x0, z0, x1, z1, fill, h = 0) => wpoly([[x0, h, z0], [x1, h, z0], [x1, h, z1], [x0, h, z1]], fill);
+function bil(q, u, v) { // yüz üzerinde nokta (u yatay, v dikey: 0 alt, 1 üst)
+  const L = (p, r, t) => [p[0] + (r[0] - p[0]) * t, p[1] + (r[1] - p[1]) * t, p[2] + (r[2] - p[2]) * t];
+  return L(L(q[0], q[1], u), L(q[3], q[2], u), v);
+}
+function sub(q, u0, v0, u1, v1, fill) { wpoly([bil(q, u0, v0), bil(q, u1, v0), bil(q, u1, v1), bil(q, u0, v1)], fill); }
+function faceText(q, u, v, size, t, color, font = 'Bungee, Impact, sans-serif') {
+  const c = toCam(...bil(q, u, v));
+  if (c[2] < RV.ZN) return;
+  const sp = projC(c); txt(t, sp[0], sp[1], size * RV.F / c[2], color, font);
+}
+function inView(x, z, r) { const c = toCam(x, 0, z); return c[2] > -r && c[2] < RV.ZF + r && Math.abs(c[0]) < c[2] * 0.45 + r + 60; }
+const rfog = d => clamp((RV.ZF - d) / 900, 0, 1);
+
+// yönlü kutu (ang: 0 = kuzey/+z, saat yönünde artar)
+function obox(cx, cz, ang, w, len, h, hb, col, deco) {
+  const sn = Math.sin(ang), cs = Math.cos(ang), W2 = w / 2, L2 = len / 2;
+  const P = (lx, lz) => [cx + lx * cs + lz * sn, cz - lx * sn + lz * cs];
+  const c = [P(-W2, -L2), P(W2, -L2), P(W2, L2), P(-W2, L2)];
+  const faces = [['rear', 0, 1, -sn, -cs], ['right', 1, 2, cs, -sn], ['front', 2, 3, sn, cs], ['left', 3, 0, -cs, sn]];
+  ctx.globalAlpha = rfog(Math.max(0, toCam(cx, 0, cz)[2]));
+  for (const [name, a, b, nx, nz] of faces) {
+    const mx = (c[a][0] + c[b][0]) / 2, mz = (c[a][1] + c[b][1]) / 2;
+    if (nx * (cam.x - mx) + nz * (cam.z - mz) <= 0) continue;
+    const q = [[c[a][0], hb, c[a][1]], [c[b][0], hb, c[b][1]], [c[b][0], h, c[b][1]], [c[a][0], h, c[a][1]]];
+    wpoly(q, name === 'left' || name === 'right' ? col.side : col.back);
+    if (deco) deco(name, q);
+  }
+  if (h < RV.CAMH) wpoly(c.map(p => [p[0], h, p[1]]), col.top);
+  ctx.globalAlpha = 1;
+}
+function wperson(x, z, color, wave) {
+  const c = toCam(x, 0, z); if (c[2] < RV.ZN || c[2] > RV.ZF) return;
+  const s = RV.F / c[2], p = projC(c);
+  ctx.globalAlpha = rfog(c[2]);
+  ctx.fillStyle = color; ctx.fillRect(p[0] - 6 * s, p[1] - 34 * s, 12 * s, 22 * s);
+  ctx.fillStyle = '#2b2e35'; ctx.fillRect(p[0] - 5 * s, p[1] - 12 * s, 4 * s, 12 * s); ctx.fillRect(p[0] + 1 * s, p[1] - 12 * s, 4 * s, 12 * s);
+  ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(p[0], p[1] - 40 * s, 6 * s, 0, 7); ctx.fill();
+  if (wave) { const k = Math.sin(G.time * 10) * 4 * s; ctx.fillRect(p[0] + 6 * s, p[1] - 52 * s + k, 3 * s, 16 * s); }
+  ctx.globalAlpha = 1;
+}
+function wtree(x, z) {
+  const c = toCam(x, 0, z); if (c[2] < RV.ZN || c[2] > RV.ZF) return;
+  const s = RV.F / c[2], p = projC(c);
+  ctx.globalAlpha = rfog(c[2]);
+  ctx.fillStyle = '#5a4030'; ctx.fillRect(p[0] - 4 * s, p[1] - 34 * s, 8 * s, 34 * s);
+  ctx.fillStyle = '#2f5a2a'; ctx.beginPath(); ctx.ellipse(p[0], p[1] - 62 * s, 30 * s, 36 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#3d7134'; ctx.beginPath(); ctx.ellipse(p[0] - 8 * s, p[1] - 72 * s, 16 * s, 18 * s, 0, 0, 7); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function wdome(x, z, h, r) {
+  const c = toCam(x, h, z); if (c[2] < RV.ZN) return;
+  const s = RV.F / c[2], p = projC(c);
+  ctx.globalAlpha = rfog(c[2]);
+  ctx.fillStyle = '#7d8b97'; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * s, r * 0.95 * s, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#93a1ad'; ctx.beginPath(); ctx.ellipse(p[0] - r * 0.3 * s, p[1] - r * 0.55 * s, r * 0.22 * s, r * 0.25 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6c34a'; ctx.fillRect(p[0] - 1.5 * s, p[1] - (r * 0.95 + 16) * s, 3 * s, 16 * s);
+  ctx.globalAlpha = 1;
+}
+function wcone(x, z, h0, h1, r, col) {
+  const a = toCam(x, h0, z), b = toCam(x, h1, z); if (a[2] < RV.ZN) return;
+  const s = RV.F / a[2], pa = projC(a), pb = projC(b);
+  ctx.globalAlpha = rfog(a[2]);
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(pa[0] - r * s, pa[1]); ctx.lineTo(pa[0] + r * s, pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function minaret(x, z, h) {
+  const st = { back: '#ece6d8', side: '#cfc7b5', top: '#e6dfd0' };
+  obox(x, z, 0, 12, 12, h, 0, st);
+  obox(x, z, 0, 20, 20, h * 0.68 + 7, h * 0.68, st);
+  wcone(x, z, h, h + 42, 8, '#7d8b97');
+}
+
+const WALLS = ['#e9e1d0', '#d8cdb6', '#c9c3b8', '#efe6d6', '#d9c6a8', '#c7d0d6', '#e3c9b9'];
+const SHOPS = ['#d7262e', '#1d4e89', '#2f8f4e', '#c97b2a', '#6b46c1'];
+function buildCity() {
+  const blocks = [], stops = [], walkers = [], trees = [], shore = [];
+  const special = { '3,1': 'cami', '1,3': 'galata', '2,2': 'park', '4,4': 'park', '0,5': 'park' };
+  for (let i = -1; i < CN; i++) for (let j = -1; j <= CN; j++) {
+    const x0 = i * CP + CR / 2, z0 = j * CP + CR / 2;
+    const outer = i < 0 || j < 0 || j >= CN;
+    const b = { i, j, x0, z0, x1: x0 + CB, z1: z0 + CB, kind: outer ? 'bina' : (special[i + ',' + j] || 'bina'), lots: [] };
+    if (b.kind === 'bina') {
+      const lw = (CB - 52) / 2 - 8;
+      for (let a = 0; a < 2; a++) for (let c = 0; c < 2; c++) {
+        const sd = hash(i * 31 + j * 17 + a * 5 + c * 3 + 1);
+        b.lots.push({ x: x0 + 30 + a * (lw + 8) + lw / 2, z: z0 + 30 + c * (lw + 8) + lw / 2, w: lw, d: lw,
+          h: (outer ? 150 : 70) + sd * (outer ? 250 : 230), seed: sd, shop: SHOPS[Math.floor(hash(sd * 99) * SHOPS.length)] });
+      }
+    }
+    if (b.kind === 'galata') {
+      for (const [a, c] of [[0, 0], [1, 0], [0, 1]]) b.lots.push({ x: x0 + 110 + a * 200, z: z0 + 110 + c * 200, w: 150, d: 150, h: 80 + hash(a + c * 3) * 40, seed: hash(a * 7 + c), shop: '#c97b2a' });
+    }
+    if (b.kind === 'park') for (let a = 0; a < 3; a++) for (let c = 0; c < 3; c++) trees.push([x0 + 80 + a * 130 + hash(a + c * 7 + i) * 30, z0 + 80 + c * 130]);
+    blocks.push(b);
+  }
+  for (let z = -CR / 2; z < CEDGE + CR / 2; z += 170) trees.push([CEDGE + CR / 2 + 18, z]);
+  // duraklar: biri otobüsün başladığı yerin hemen önünde
+  stops.push({ x: 3 * CP + CR / 2 + 14, z: CR / 2 + CB / 2, nx: -1, nz: 0 });
+  const sides = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  for (const b of blocks) {
+    if (b.i < 0 || b.j < 0 || b.j >= CN || (b.i === 3 && b.j === 0) || stops.length >= 13) continue;
+    if (hash(b.i * 13 + b.j * 7 + 2) > 0.5) continue;
+    const [sx, sz] = sides[Math.floor(hash(b.i + b.j * 5) * 4)];
+    const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+    stops.push({ x: sx ? (sx < 0 ? b.x0 + 14 : b.x1 - 14) : cx, z: sz ? (sz < 0 ? b.z0 + 14 : b.z1 - 14) : cz, nx: sx, nz: sz });
+  }
+  stops.forEach(s => { s.waiting = 2 + Math.floor(rand(0, 5)); s.refill = 0; s.board = 0; });
+  const inner = blocks.filter(b => b.i >= 0 && b.j >= 0 && b.j < CN);
+  for (let n = 0; n < 22; n++) walkers.push({ b: inner[Math.floor(rand(0, inner.length))], t: Math.random(), sp: rand(18, 34) * (Math.random() < 0.5 ? -1 : 1), color: ['#e2574c', '#f2c230', '#4a90d9', '#7bc96f', '#d48bd9', '#3b3f47'][n % 6] });
+  for (let z = -1800; z < CEDGE + 2500; z += 190) shore.push({ x: CEDGE + 3050 + hash(z) * 250, z, w: 120 + hash(z + 1) * 80, h: 60 + hash(z + 2) * 200, seed: hash(z + 3) });
+  const cars = [];
+  for (let n = 0; n < 14; n++) cars.push(newCityCar());
+  const blockC = (i, j) => [i * CP + CR / 2 + CB / 2, j * CP + CR / 2 + CB / 2];
+  const cami = blockC(3, 1), gal = blockC(1, 3);
+  const lm = [
+    { name: 'SULTANAHMET CAMİİ', x: cami[0], z: cami[1], h: 320 },
+    { name: 'GALATA KULESİ', x: gal[0], z: gal[1], h: 300 },
+    { name: 'KIZ KULESİ', x: CEDGE + 700, z: 2.6 * CP, h: 210 },
+    { name: '15 TEMMUZ ŞEHİTLER KÖPRÜSÜ', x: CEDGE + 1700, z: CEDGE + 800, h: 520 }
+  ];
+  return { blocks, stops, walkers, trees, shore, cars, lm, cami, gal };
+}
+function newCityCar() {
+  const axis = Math.random() < 0.5 ? 'x' : 'z';
+  const taxi = Math.random() < 0.35, van = !taxi && Math.random() < 0.2;
+  return { axis, k: Math.floor(rand(0, CN + 1)), dir: Math.random() < 0.5 ? 1 : -1, s: rand(CP, CEDGE - CP), v: 0, vmax: rand(150, 230),
+    taxi, type: van ? 'van' : 'car', color: taxi ? '#f2c230' : CAR_COLORS[Math.floor(rand(0, CAR_COLORS.length))], brk: false };
+}
+const carPos = c => c.axis === 'z' ? [c.k * CP + c.dir * 45, c.s] : [c.s, c.k * CP - c.dir * 45];
+const carAng = c => c.axis === 'z' ? (c.dir > 0 ? 0 : Math.PI) : (c.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+function perimPos(b, t) {
+  const L = CB - 24; let d = ((t % 1) + 1) % 1 * 4 * L;
+  if (d < L) return [b.x0 + 12 + d, b.z0 + 12]; d -= L;
+  if (d < L) return [b.x1 - 12, b.z0 + 12 + d]; d -= L;
+  if (d < L) return [b.x1 - 12 - d, b.z1 - 12]; d -= L;
+  return [b.x0 + 12, b.z1 - 12 - d];
+}
+
+function updateRoam(dt) {
+  const R = G.r;
+  G.time += dt;
+  const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  if (input.gas) R.speed += (R.speed < 0 ? 90 : 26) * dt;
+  if (input.brake) R.speed -= (R.speed > 0.5 ? 90 : 18) * dt;
+  if (!input.gas && !input.brake) R.speed -= Math.sign(R.speed) * Math.min(Math.abs(R.speed), 8 * dt);
+  R.speed = clamp(R.speed, -15, 70);
+  G.braking = input.brake && R.speed > 0.5;
+  const px = R.speed * PXS;
+  R.a += steer * (px / 300) * dt;
+  const fx = Math.sin(R.a), fz = Math.cos(R.a);
+  R.x += fx * px * dt; R.z += fz * px * dt;
+  // binalara / kaldırıma çarpma
+  let hit = false;
+  for (const off of [-52, 0, 52]) {
+    const cx = R.x + fx * off, cz = R.z + fz * off;
+    for (const b of CITY.blocks) {
+      if (cx < b.x0 - 40 || cx > b.x1 + 40 || cz < b.z0 - 40 || cz > b.z1 + 40) continue;
+      const qx = clamp(cx, b.x0, b.x1), qz = clamp(cz, b.z0, b.z1);
+      let dx = cx - qx, dz = cz - qz, d = Math.hypot(dx, dz);
+      if (d === 0) { const opts = [[cx - b.x0, -1, 0], [b.x1 - cx, 1, 0], [cz - b.z0, 0, -1], [b.z1 - cz, 0, 1]].sort((p, q) => p[0] - q[0]); dx = opts[0][1]; dz = opts[0][2]; d = -opts[0][0]; R.x += dx * (31 - d); R.z += dz * (31 - d); hit = true; continue; }
+      if (d < 31) { R.x += dx / d * (31 - d); R.z += dz / d * (31 - d); hit = true; }
+    }
+  }
+  const lim = CR / 2 - 32;
+  if (R.x < -lim || R.x > CEDGE + lim || R.z < -lim || R.z > CEDGE + lim) hit = true;
+  R.x = clamp(R.x, -lim, CEDGE + lim); R.z = clamp(R.z, -lim, CEDGE + lim);
+  if (hit) {
+    if (Math.abs(R.speed) > 12) { noise(0.2, 0.14); toast('Kaldırıma sürttün! Dikkat.', 1.4, '#ff6b6b'); }
+    R.speed *= -0.25;
+  }
+  // trafik
+  R.inv -= dt;
+  for (const c of CITY.cars) {
+    const [x, z] = carPos(c), ang = carAng(c), cfx = Math.sin(ang), cfz = Math.cos(ang);
+    let target = c.vmax;
+    const check = (ox, oz, gap) => {
+      const dx = ox - x, dz = oz - z, ahead = dx * cfx + dz * cfz, lat = Math.abs(dx * cfz - dz * cfx);
+      if (ahead > 0 && ahead < gap && lat < 62) target = Math.min(target, Math.max(0, (ahead - 115) * 1.6));
+    };
+    check(R.x, R.z, 280); check(R.x + fx * 70, R.z + fz * 70, 280);
+    for (const o of CITY.cars) if (o !== c) { const p = carPos(o); check(p[0], p[1], 210); }
+    c.brk = target < c.v - 5;
+    c.v += clamp(target - c.v, -420 * dt, 110 * dt);
+    const prev = c.s; c.s += c.dir * c.v * dt;
+    const m = Math.round((prev + c.s) / 2 / CP), X = m * CP;
+    if (m >= 0 && m <= CN && (prev - X) * (c.s - X) < 0) {
+      const straightOk = m + c.dir >= 0 && m + c.dir <= CN;
+      if (!straightOk || Math.random() < 0.45) {
+        const oldK = c.k;
+        c.axis = c.axis === 'z' ? 'x' : 'z'; c.k = m; c.s = oldK * CP;
+        c.dir = oldK === 0 ? 1 : oldK === CN ? -1 : (Math.random() < 0.5 ? 1 : -1);
+      }
+    }
+    if (R.inv <= 0 && Math.hypot(x - R.x, z - R.z) < 72) {
+      R.inv = 1.2; noise(0.3, 0.2);
+      if (Math.abs(R.speed) > 8) { G.money = Math.max(0, G.money - 100); G.crashes++; toast('Kaza! Sigorta masrafı −₺100', 1.8, '#ff6b6b'); }
+      R.speed *= -0.3; c.v = 0;
+    }
+  }
+  // duraklar
+  R.near = null; let boarding = false;
+  for (const st of CITY.stops) {
+    if (st.waiting <= 0) { st.refill -= dt; if (st.refill <= 0) st.waiting = 2 + Math.floor(rand(0, 5)); continue; }
+    const d = Math.hypot(st.x - R.x, st.z - R.z);
+    if (!R.near || d < R.near.d) R.near = { st, d };
+    if (d < 200 && Math.abs(R.speed) < 3 && G.pax < CAP) {
+      boarding = true;
+      st.board -= dt;
+      if (st.board <= 0) {
+        st.board = 0.32; st.waiting--; G.pax++; G.carried++; G.money += FARE_CITY;
+        float('+' + money(FARE_CITY), W / 2 + 50, 360, '#7be08f'); coinSound();
+        if (st.waiting === 0) { st.refill = 30; G.money += 50; G.served++; toast('Durak boşaldı! Dakiklik primi +₺50', 1.8, '#7be08f'); }
+      }
+    }
+  }
+  R.doors += ((boarding ? 1 : 0) - R.doors) * Math.min(1, dt * 6);
+  for (const w of CITY.walkers) w.t += w.sp * dt / (4 * (CB - 24));
+  let d = R.a - R.camA; d = Math.atan2(Math.sin(d), Math.cos(d));
+  R.camA += d * Math.min(1, dt * 3.5);
+  G.hornCd -= dt;
+  if (engGain && ac) {
+    engOsc.frequency.setTargetAtTime(38 + Math.abs(R.speed) * 0.85 + (input.gas ? 8 : 0), ac.currentTime, 0.1);
+    engGain.gain.setTargetAtTime(paused ? 0 : 0.035, ac.currentTime, 0.2);
+  }
+}
+
+function cityBus() {
+  const R = G.r, a = R.a;
+  const sn = Math.sin(a), cs = Math.cos(a), P = (lx, lz) => [R.x + lx * cs + lz * sn, 0.5, R.z - lx * sn + lz * cs];
+  wpoly([P(-33, -78), P(37, -78), P(37, 82), P(-33, 82)].map(p => [p[0], p[1], p[2]]), 'rgba(0,0,0,.3)');
+  const hazard = R.doors > 0.5 && Math.floor(G.time * 3) % 2 === 0;
+  const flash = R.inv > 0 && Math.floor(R.inv * 10) % 2 === 0;
+  obox(R.x, R.z, a, 58, 150, 89, 4, { back: '#f7f6f2', side: '#e3e1db', top: '#efeee9' }, (name, q) => {
+    if (name === 'left' || name === 'right') {
+      sub(q, 0.05, 0.53, 0.9, 0.86, '#16212c');
+      sub(q, 0, 0.17, 1, 0.31, '#d7262e'); sub(q, 0, 0.13, 1, 0.17, '#f2c230');
+      if (name === 'right') sub(q, 0.78, 0.04, 0.92, 0.5, R.doors > 0.05 ? '#f2c230' : '#c9c6bd');
+    } else if (name === 'rear') {
+      sub(q, 0.07, 0.67, 0.93, 0.94, '#16212c');
+      faceText(q, 0.5, 0.56, 12, 'ZAFER', '#d7262e'); faceText(q, 0.5, 0.45, 7, 'TURİZM', '#23262d');
+      sub(q, 0, 0.32, 1, 0.37, '#d7262e'); sub(q, 0, 0.3, 1, 0.315, '#f2c230');
+      const lit = G.braking ? '#ff2a2a' : '#9b1d1d';
+      sub(q, 0.03, 0.12, 0.13, 0.27, lit); sub(q, 0.87, 0.12, 0.97, 0.27, lit);
+      sub(q, 0.03, 0.24, 0.13, 0.28, hazard ? '#ffb21e' : '#6e4a12'); sub(q, 0.87, 0.24, 0.97, 0.28, hazard ? '#ffb21e' : '#6e4a12');
+      sub(q, 0.34, 0.12, 0.66, 0.19, '#ffffff'); faceText(q, 0.5, 0.155, 4, '34 ZT 23', '#111', 'Rubik, sans-serif');
+      sub(q, 0, 0, 1, 0.08, '#23262d');
+    } else {
+      sub(q, 0.05, 0.5, 0.95, 0.92, '#16212c');
+      sub(q, 0.06, 0.12, 0.2, 0.2, '#fff3b0'); sub(q, 0.8, 0.12, 0.94, 0.2, '#fff3b0');
+    }
+  });
+  if (!flash) obox(R.x + sn * 26, R.z + cs * 26, a, 36, 42, 98, 89, { back: '#d9d7d0', side: '#bdbab2', top: '#cfccc4' });
+}
+function cityCar(c) {
+  const [x, z] = carPos(c), a = carAng(c);
+  c.cols = c.cols || cols(c.color);
+  const van = c.type === 'van', len = van ? 98 : 80, w = van ? 50 : 44, bodyH = van ? 30 : 24, roofH = van ? 54 : 44;
+  obox(x, z, a, w, len, bodyH, 6, c.cols, (name, q) => {
+    if (name === 'rear') { sub(q, 0.04, 0.45, 0.24, 0.8, c.brk ? '#ff3030' : '#8f1b1b'); sub(q, 0.76, 0.45, 0.96, 0.8, c.brk ? '#ff3030' : '#8f1b1b'); sub(q, 0.36, 0.2, 0.64, 0.42, '#f3f1ec'); }
+    if (name === 'front') { sub(q, 0.05, 0.5, 0.25, 0.8, '#fff3b0'); sub(q, 0.75, 0.5, 0.95, 0.8, '#fff3b0'); }
+    if (c.taxi && (name === 'left' || name === 'right')) sub(q, 0.1, 0.45, 0.9, 0.6, '#20252b');
+  });
+  const sn = Math.sin(a), cs = Math.cos(a), off = van ? 4 : -4;
+  obox(x + sn * off, z + cs * off, a, w - 6, len * (van ? 0.8 : 0.5), roofH, bodyH, { back: '#1b2733', side: '#22303d', top: c.cols.top });
+  if (c.taxi) obox(x + sn * off, z + cs * off, a, 18, 8, roofH + 8, roofH, { back: '#20252b', side: '#20252b', top: '#f7e27a' }, (name, q) => { if (name === 'rear' || name === 'front') sub(q, 0.1, 0.2, 0.9, 0.8, '#f7e27a'); });
+}
+function cityBuilding(L) {
+  const wall = WALLS[Math.floor(L.seed * WALLS.length)];
+  const roof = L.seed < 0.45 ? '#b5523b' : '#9a978f';
+  const near = toCam(L.x, 0, L.z)[2] < 1500;
+  obox(L.x, L.z, 0, L.w, L.d, L.h, 0, { back: wall, side: shade(wall, 0.8), top: roof }, near ? (name, q) => {
+    sub(q, 0.04, 0.05, 0.96, Math.min(0.2, 34 / L.h), L.shop);
+    const fl = Math.floor((L.h - 40) / 30);
+    for (let f = 0; f < fl; f++) { const v0 = (44 + f * 30) / L.h; sub(q, 0.08, v0, 0.92, v0 + 13 / L.h, '#3d556b'); }
+  } : null);
+}
+function sultanahmet() {
+  const [x, z] = CITY.cami, st = { back: '#e6dfd0', side: '#c9c1af', top: '#d9d2c3' };
+  obox(x, z + 30, 0, 230, 210, 72, 0, st, (name, q) => { for (let k = 0; k < 5; k++) sub(q, 0.1 + k * 0.17, 0.3, 0.17 + k * 0.17, 0.65, '#5f6b74'); });
+  for (const [dx, dz] of [[-72, 30], [72, 30], [0, -40], [0, 100]]) wdome(x + dx, z + dz, 72, 42);
+  wdome(x, z + 30, 72, 82);
+}
+function galataTower() {
+  const [x, z] = CITY.gal, st = { back: '#c9b48f', side: '#b19c77', top: '#b9a47f' };
+  obox(x, z, 0, 60, 60, 175, 0, st, (name, q) => { for (let k = 0; k < 4; k++) sub(q, 0.42, 0.15 + k * 0.18, 0.58, 0.24 + k * 0.18, '#3d556b'); sub(q, 0, 0.8, 1, 0.85, '#e9e1d0'); });
+  obox(x, z, Math.PI / 4, 60, 60, 175, 0, st);
+  wcone(x, z, 175, 255, 40, '#5d6f7a');
+}
+function kizKulesi() {
+  const x = CEDGE + 700, z = 2.6 * CP;
+  wpoly(Array.from({ length: 10 }, (_, i) => [x + Math.cos(i * 0.628) * 90, 2, z + Math.sin(i * 0.628) * 70]), '#9a8f7a');
+  obox(x, z, 0, 120, 70, 50, 2, { back: '#efe8da', side: '#d6cdbb', top: '#b5523b' });
+  obox(x + 20, z, 0, 34, 34, 130, 0, { back: '#efe8da', side: '#d6cdbb', top: '#efe8da' }, (n, q) => sub(q, 0.35, 0.6, 0.65, 0.75, '#3d556b'));
+  wcone(x + 20, z, 130, 172, 22, '#7d8b97');
+}
+function bosphorusBridge(L) {
+  const bz = CEDGE + 800, x0 = CEDGE - 90, x1 = CEDGE + 3300, tw = [CEDGE + 650, CEDGE + 2750];
+  const tc = { back: '#b7bcc4', side: '#9ea3ab', top: '#c4c8ce' };
+  for (const tx of tw) for (const dz of [-50, 50]) L.push({ x: tx, z: bz + dz, f: () => obox(tx, bz + dz, 0, 26, 26, 480, 0, tc) });
+  for (const tx of tw) L.push({ x: tx, z: bz, f: () => obox(tx, bz, 0, 20, 100, 470, 440, tc) });
+  L.push({ x: (x0 + x1) / 2, z: bz, f: () => {
+    obox((x0 + x1) / 2, bz, Math.PI / 2, 100, x1 - x0, 130, 112, { back: '#8f949b', side: '#a5a9b0', top: '#5a5d63' });
+    ctx.strokeStyle = '#e4e4e6'; ctx.lineWidth = 2;
+    for (const dz of [-48, 48]) {
+      ctx.beginPath(); let started = false;
+      for (let x = x0; x <= x1; x += 60) {
+        let h;
+        if (x < tw[0]) h = 130 + (x - x0) / (tw[0] - x0) * 340;
+        else if (x > tw[1]) h = 470 - (x - tw[1]) / (x1 - tw[1]) * 340;
+        else { const t = (x - tw[0]) / (tw[1] - tw[0]); h = 150 + 320 * Math.pow(2 * t - 1, 2); }
+        const c = toCam(x, h, bz + dz);
+        if (c[2] < RV.ZN) { started = false; continue; }
+        const p = projC(c); started ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); started = true;
+      }
+      ctx.stroke();
+    }
+  } });
+}
+
+function renderRoam() {
+  const R = G.r;
+  cam.c = Math.cos(R.camA); cam.s = Math.sin(R.camA);
+  cam.x = R.x - Math.sin(R.camA) * RV.BACK; cam.z = R.z - Math.cos(R.camA) * RV.BACK;
+  const sky = ctx.createLinearGradient(0, 80, 0, RV.HZ);
+  sky.addColorStop(0, '#5b8ec6'); sky.addColorStop(1, '#d6e4ec');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, RV.HZ + 1);
+  // uzak siluet (yöne göre kayar)
+  const ox = -R.camA * 520;
+  ctx.fillStyle = '#b3bcc6';
+  for (let i = 0; i < 40; i++) { const x = ((i * 47 + ox) % 1880 + 1880) % 1880 - 200, h = 8 + hash(i) * 26; if (x > -30 && x < W + 30) ctx.fillRect(x, RV.HZ - h, 22, h); }
+  ctx.fillStyle = '#8f8c84'; ctx.fillRect(0, RV.HZ, W, H - RV.HZ);
+  // deniz ve Anadolu yakası
+  gquad(CEDGE + CR / 2 + 36, -12000, CEDGE + 16000, 20000, '#2d6e9c');
+  gquad(CEDGE + 2950, -12000, CEDGE + 16000, 20000, '#7e8a72');
+  gquad(CEDGE + CR / 2, -CP, CEDGE + CR / 2 + 36, CEDGE + CP, '#c9c2b0');
+  // bloklar ve yollar
+  for (const b of CITY.blocks) {
+    if (!inView((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2, 420)) continue;
+    gquad(b.x0, b.z0, b.x1, b.z1, '#bcb7ab');
+    if (b.kind === 'park') gquad(b.x0 + 22, b.z0 + 22, b.x1 - 22, b.z1 - 22, '#5f8f45');
+    if (b.kind === 'cami') gquad(b.x0 + 22, b.z0 + 22, b.x1 - 22, b.z1 - 22, '#ddd6c6');
+  }
+  for (let k = 0; k <= CN; k++) {
+    gquad(k * CP - CR / 2, -CR / 2, k * CP + CR / 2, CEDGE + CR / 2, '#3a3c42');
+    gquad(-CR / 2, k * CP - CR / 2, CEDGE + CR / 2, k * CP + CR / 2, '#3a3c42');
+  }
+  // şerit çizgileri ve yaya geçitleri (yakında)
+  for (let k = 0; k <= CN; k++) for (let p = -CR / 2 + 20; p < CEDGE + CR / 2; p += 80) {
+    if (Math.abs(p + 20 - Math.round((p + 20) / CP) * CP) < CR / 2 + 30) continue;
+    const X = k * CP;
+    if (Math.hypot(X - R.x, p - R.z) < 1900) gquad(X - 2, p, X + 2, p + 40, '#ecebe6');
+    if (Math.hypot(p - R.x, X - R.z) < 1900) gquad(p, X - 2, p + 40, X + 2, '#ecebe6');
+  }
+  for (let i = 0; i <= CN; i++) for (let j = 0; j <= CN; j++) {
+    const X = i * CP, Z = j * CP;
+    if (Math.hypot(X - R.x, Z - R.z) > 1300) continue;
+    for (let s = -75; s <= 65; s += 28) {
+      gquad(X + s, Z - CR / 2 - 34, X + s + 14, Z - CR / 2 - 4, '#ecebe6'); gquad(X + s, Z + CR / 2 + 4, X + s + 14, Z + CR / 2 + 34, '#ecebe6');
+      gquad(X - CR / 2 - 34, Z + s, X - CR / 2 - 4, Z + s + 14, '#ecebe6'); gquad(X + CR / 2 + 4, Z + s, X + CR / 2 + 34, Z + s + 14, '#ecebe6');
+    }
+  }
+  for (const st of CITY.stops) if (inView(st.x, st.z, 100)) { // durak cebi
+    const ax = st.nz !== 0, x0 = ax ? st.x - 90 : st.x + st.nx * 14, z0 = ax ? st.z + st.nz * 14 : st.z - 90;
+    const x1 = ax ? st.x + 90 : st.x + st.nx * 64, z1 = ax ? st.z + st.nz * 64 : st.z + 90;
+    gquad(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), 'rgba(242,194,48,.35)', 0.5);
+  }
+  // nesneler
+  const L = [];
+  const add = (x, z, f, r = 120) => { if (inView(x, z, r)) L.push({ x, z, f }); };
+  for (const b of CITY.blocks) for (const lot of b.lots) add(lot.x, lot.z, () => cityBuilding(lot), 200);
+  for (const [x, z] of CITY.trees) add(x, z, () => wtree(x, z));
+  for (const s of CITY.shore) add(s.x, s.z, () => obox(s.x, s.z, 0, s.w, 150, s.h, 0, { back: WALLS[Math.floor(s.seed * 7)], side: shade(WALLS[Math.floor(s.seed * 7)], 0.8), top: '#b5523b' }), 300);
+  const [cx, cz] = CITY.cami;
+  add(cx, cz + 30, sultanahmet, 260);
+  for (const [dx, dz] of [[-125, -80], [125, -80], [-125, 140], [125, 140], [-185, -185], [185, -185]]) add(cx + dx, cz + dz, () => minaret(cx + dx, cz + dz, 250), 60);
+  add(CITY.gal[0], CITY.gal[1], galataTower, 120);
+  add(CEDGE + 700, 2.6 * CP, kizKulesi, 150);
+  const fz = 2.2 * CP + Math.sin(G.time * 0.04) * 2200, fdir = Math.cos(G.time * 0.04) >= 0 ? 0 : Math.PI;
+  add(CEDGE + 1250, fz, () => {
+    obox(CEDGE + 1250, fz, fdir, 70, 200, 30, 0, { back: '#f3f1ec', side: '#e3e0d8', top: '#e9e6de' }, (n, q) => sub(q, 0, 0.3, 1, 0.55, '#1d4e89'));
+    obox(CEDGE + 1250, fz, fdir, 50, 130, 58, 30, { back: '#f3f1ec', side: '#e3e0d8', top: '#e9e6de' }, (n, q) => sub(q, 0.05, 0.3, 0.95, 0.7, '#16212c'));
+    obox(CEDGE + 1250, fz, fdir, 12, 12, 84, 58, cols('#20252b'));
+  }, 200);
+  bosphorusBridge({ push: o => add(o.x, o.z, o.f, 1800) });
+  for (const zz of [-CR / 2 - 6, CEDGE + CR / 2 + 6]) add(CEDGE, zz, () => obox(CEDGE, zz, Math.PI / 2, 10, CR, 26, 0, { back: '#d7262e', side: '#f3f1ec', top: '#f3f1ec' }));
+  for (const st of CITY.stops) {
+    add(st.x, st.z, () => {
+      const along = st.nz !== 0;
+      obox(st.x, st.z, 0, 4, 4, 140, 0, cols('#6d7076'));
+      obox(st.x, st.z, 0, along ? 40 : 4, along ? 4 : 40, 150, 112, { back: '#2563a8', side: '#2563a8', top: '#2563a8' }, (n, q) => faceText(q, 0.5, 0.5, 9, 'DURAK', '#fff', 'Rubik, sans-serif'));
+    });
+    for (let p = 0; p < Math.min(st.waiting, 8); p++) {
+      const o = (p - 3.5) * 17, px = st.x + (st.nz !== 0 ? o : 0) - st.nx * 6, pz = st.z + (st.nx !== 0 ? o : 0) - st.nz * 6;
+      add(px, pz, () => wperson(px, pz, ['#e2574c', '#f2c230', '#4a90d9', '#7bc96f', '#d48bd9'][p % 5], p % 3 === 0), 40);
+    }
+  }
+  for (const w of CITY.walkers) { const [x, z] = perimPos(w.b, w.t); add(x, z, () => wperson(x, z, w.color, false), 40); }
+  for (const c of CITY.cars) { const [x, z] = carPos(c); add(x, z, () => cityCar(c)); }
+  add(R.x, R.z, cityBus, 200);
+  for (const o of L) { const c = toCam(o.x, 0, o.z); o.d = c[0] * c[0] + c[2] * c[2]; }
+  L.sort((a, b) => b.d - a.d);
+  for (const o of L) o.f();
+  // ufuk pusu
+  const haze = ctx.createLinearGradient(0, RV.HZ - 6, 0, RV.HZ + 30);
+  haze.addColorStop(0, 'rgba(214,228,236,.0)'); haze.addColorStop(0.3, 'rgba(214,228,236,.85)'); haze.addColorStop(1, 'rgba(214,228,236,0)');
+  ctx.fillStyle = haze; ctx.fillRect(0, RV.HZ - 6, W, 36);
+  // önemli yer etiketleri
+  for (const m of CITY.lm) {
+    const c = toCam(m.x, m.h, m.z); if (c[2] < 200 || c[2] > 3800) continue;
+    const p = projC(c); if (p[0] < -40 || p[0] > W + 40) continue;
+    const dist = Math.round(Math.hypot(m.x - R.x, m.z - R.z) * PXM);
+    ctx.font = '700 11px Rubik, sans-serif';
+    const label = m.name + ' · ' + dist + ' m', tw = ctx.measureText(label).width + 16;
+    const lx = clamp(p[0], tw / 2 + 4, W - tw / 2 - 4), ly = Math.max(186, p[1] - 14);
+    ctx.fillStyle = 'rgba(16,18,22,.78)'; rr(lx - tw / 2, ly - 11, tw, 22, 11); ctx.fill();
+    ctx.fillStyle = '#f2c230'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx, ly + 0.5);
+  }
+}
+
+function drawCityMap(g, x, y, w, h, big) {
+  const minX = -CP + CR / 2, maxX = CEDGE + 900, minZ = -CP + CR / 2, maxZ = CEDGE + CP - CR / 2;
+  const s = Math.min(w / (maxX - minX), h / (maxZ - minZ));
+  const ox = x + (w - (maxX - minX) * s) / 2, oy = y + (h - (maxZ - minZ) * s) / 2;
+  const P = (wx, wz) => [ox + (wx - minX) * s, oy + (maxZ - wz) * s];
+  g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = '#3a3c42'; g.fillRect(x, y, w, h);
+  const [wx0] = P(CEDGE + CR / 2, 0); g.fillStyle = '#1f4f73'; g.fillRect(wx0, y, x + w - wx0, h);
+  for (const b of CITY.blocks) {
+    const [a, c] = P(b.x0, b.z1), [d, e] = P(b.x1, b.z0);
+    g.fillStyle = b.kind === 'park' ? '#5f8f45' : b.kind === 'cami' ? '#e6dfd0' : (b.i < 0 || b.j < 0 || b.j >= CN) ? '#a9a291' : '#d9cfb4';
+    g.fillRect(a, c, d - a, e - c);
+  }
+  if (big) {
+    g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const m of CITY.lm) { const [px, py] = P(Math.min(m.x, CEDGE + 800), Math.min(m.z, CEDGE + 400)); g.fillStyle = '#d7262e'; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill(); g.fillStyle = '#20252b'; g.fillRect(px - g.measureText(m.name).width / 2 - 4, py + 7, g.measureText(m.name).width + 8, 16); g.fillStyle = '#f3f1ec'; g.fillText(m.name, px, py + 15.5); }
+    g.fillStyle = '#9cc3e0'; const [bx, by] = P(CEDGE + 500, CP * 1.2); g.fillText('BOĞAZ', bx, by);
+  }
+  for (const st of CITY.stops) if (st.waiting > 0) { const [px, py] = P(st.x, st.z); g.fillStyle = '#f2c230'; g.beginPath(); g.arc(px, py, big ? 5 : 1.8, 0, 7); g.fill(); }
+  const R = G.r, [bx, by] = P(R.x, R.z), r = big ? 11 : 4.5;
+  g.save(); g.translate(bx, by); g.rotate(R.a);
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, -r * 1.3); g.lineTo(r, r); g.lineTo(-r, r); g.closePath(); g.fill();
+  g.fillStyle = '#d7262e'; g.beginPath(); g.moveTo(0, -r * 0.9); g.lineTo(r * 0.6, r * 0.7); g.lineTo(-r * 0.6, r * 0.7); g.closePath(); g.fill();
+  g.restore(); g.restore();
+}
+
+function drawHUDRoam() {
+  const R = G.r;
+  ctx.fillStyle = 'rgba(16,18,22,.86)'; ctx.fillRect(0, 0, W, 88);
+  ctx.fillStyle = '#d7262e'; ctx.fillRect(0, 88, W, 3);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '32px Bungee, Impact, sans-serif';
+  ctx.fillText(String(Math.round(Math.abs(R.speed))).padStart(3, ' '), 12, 42);
+  ctx.fillStyle = R.speed < -0.5 ? '#f2c230' : '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText(R.speed < -0.5 ? 'GERİ' : 'km/sa', 14, 56);
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText(money(G.money), 102, 30);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 50);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#f2c230'; ctx.font = '15px Bungee, Impact, sans-serif'; ctx.fillText('İSTANBUL', W - 12, 28);
+  ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Serbest sürüş · şehir hattı', W - 12, 46);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif';
+  if (R.near) {
+    const st = R.near.st, rel = Math.atan2(st.x - R.x, st.z - R.z) - R.a, idx = ((Math.round(Math.atan2(Math.sin(rel), Math.cos(rel)) / (Math.PI / 4)) % 8) + 8) % 8;
+    ctx.fillText('● En yakın durak ' + ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'][idx] + ' ' + Math.round(R.near.d * PXM) + ' m · ' + st.waiting + ' yolcu bekliyor', 12, 74);
+  }
+  ctx.fillStyle = 'rgba(16,18,22,.8)'; rr(MINI.x - 4, MINI.y - 4, MINI.w + 8, MINI.h + 22, 6); ctx.fill();
+  drawCityMap(ctx, MINI.x, MINI.y, MINI.w, MINI.h, false);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 10px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('M menü · mancınık', MINI.x + MINI.w / 2, MINI.y + MINI.h + 9);
+  let msg = null;
+  if (G.pax >= CAP) msg = 'Otobüs dolu! M → mancınığa';
+  else if (R.near && R.near.d < 420) msg = R.near.d < 200 ? (Math.abs(R.speed) < 3 ? 'Yolcular biniyor…' : 'Dur! Yolcular binsin') : 'Durağa yanaş';
+  if (msg) {
+    ctx.fillStyle = 'rgba(242,194,48,.95)'; rr(12, 100, 190, 26, 13); ctx.fill();
+    ctx.fillStyle = '#15171c'; ctx.font = '700 13px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(msg, 107, 113.5);
+  }
+  drawToastFloats();
+}
+function drawToastFloats() {
+  if (G.toast) {
+    const a = Math.min(1, G.toast.t * 3, (G.toast.max - G.toast.t) * 6 + 0.2);
+    ctx.globalAlpha = clamp(a, 0, 1);
+    ctx.font = '700 14px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = Math.min(W - 30, ctx.measureText(G.toast.text).width + 30);
+    ctx.fillStyle = 'rgba(16,18,22,.9)'; rr(W / 2 - tw / 2, 160, tw, 32, 16); ctx.fill();
+    ctx.fillStyle = G.toast.color; ctx.fillText(G.toast.text, W / 2, 176.5, W - 44);
+    ctx.globalAlpha = 1;
+  }
+  for (const f of G.floats) {
+    ctx.globalAlpha = clamp(f.t, 0, 1); ctx.fillStyle = f.color; ctx.font = '700 15px Rubik, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(f.text, clamp(f.x, 40, W - 40), f.y); ctx.globalAlpha = 1;
+  }
+}
+function tickFx(dt) {
+  for (const f of G.floats) { f.t -= dt; f.y -= 40 * dt; }
+  G.floats = G.floats.filter(f => f.t > 0);
+  if (G.toast) { G.toast.t -= dt; if (G.toast.t <= 0) G.toast = null; }
+}
+
+// =====================================================================
+// MANCINIK — Gürbulak Sınır Kapısı'nda yolcuları fırlat (yan görünüm)
+// =====================================================================
+const KS = 0.42, KGY = 652, KG = 520, KOX = 150;
+const KT = [
+  { name: 'Saman balyası', x0: 520, x1: 660, pts: 200, type: 'hay', top: 70 },
+  { name: 'Havuz', x0: 980, x1: 1170, pts: 500, type: 'pool', top: -14 },
+  { name: 'Trambolin', x0: 1460, x1: 1570, pts: 300, type: 'tramp', top: 46 },
+  { name: 'Hedef', x0: 2040, x1: 2170, pts: 1000, type: 'bull', top: 0 }
+];
+const ARM_COCK = Math.PI + 0.25, ARM_REL = Math.PI / 2 - 0.2, PIV = [40, 72];
+let K = null, kHeld = false;
+function startCatapult() {
+  const n = G.mode === 'roam' ? G.pax : Math.max(G.pax, 6);
+  K = { from: G.mode, total: n, left: n, angle: 45, power: 0, pdir: 1, charging: false, proj: null, camX: 0,
+    wind: Math.round(rand(-45, 45)), earned: 0, landed: [], parts: [], arm: ARM_COCK, armT: 0, wait: 0, done: false, endT: 0 };
+  G.mode = 'catapult'; kHeld = false;
+  setControls();
+  if (engGain && ac) engGain.gain.setTargetAtTime(0, ac.currentTime, 0.2);
+  toast(n + ' yolcu mancınığa hazır! FIRLAT\'a basılı tut, bırak.', 3, '#f2c230');
+}
+const kPersonColor = i => ['#e2574c', '#f2c230', '#4a90d9', '#7bc96f', '#d48bd9', '#ff8f3c'][i % 6];
+function kFire() {
+  K.charging = false;
+  const v0 = 350 + K.power * 7.2, a = K.angle * Math.PI / 180;
+  const sx = PIV[0] + Math.cos(ARM_REL) * 112, sy = PIV[1] + Math.sin(ARM_REL) * 112;
+  K.proj = { x: sx, y: sy, vx: v0 * Math.cos(a), vy: v0 * Math.sin(a), rot: 0, vr: rand(7, 11), chute: false, bounced: false, state: 'fly', color: kPersonColor(K.total - K.left) };
+  K.left--; K.armT = 0.18; G.launched++; K.power = 0; K.pdir = 1;
+  beep(180, 0.25, 'sawtooth', 0.05); beep(520, 0.3, 'triangle', 0.04, 0.05);
+}
+function kChute() {
+  if (K && K.proj && K.proj.state === 'fly' && !K.proj.chute) { K.proj.chute = true; beep(880, 0.08, 'triangle', 0.05); beep(660, 0.12, 'triangle', 0.05, 0.08); }
+}
+function kAward(pts, text, color) {
+  K.earned += pts; G.money += pts;
+  const p = K.proj;
+  float(text, KOX + (p.x - K.camX) * KS, KGY - p.y * KS - 40, color);
+}
+function kLand(t) {
+  const p = K.proj;
+  if (t && t.type === 'tramp' && !p.bounced) {
+    p.bounced = true; p.y = t.top; p.vy = Math.abs(p.vy) * 0.75 + 160; p.vx *= 0.9;
+    kAward(t.pts, 'Trambolin! +' + money(t.pts), '#7be08f'); beep(300, 0.2, 'sine', 0.08); beep(600, 0.25, 'sine', 0.06, 0.1);
+    return;
+  }
+  p.state = 'landed'; p.y = t ? t.top : 0;
+  let pts = 0, text = '', color = '#7be08f';
+  if (t && t.type === 'hay') { pts = t.pts; text = 'Samana gömüldü! +' + money(pts); noise(0.25, 0.12); }
+  else if (t && t.type === 'pool') { pts = t.pts; text = 'Havuza şıpır! +' + money(pts); noise(0.5, 0.18); for (let i = 0; i < 26; i++) K.parts.push({ x: p.x, y: 0, vx: rand(-160, 160), vy: rand(150, 420), t: 1, color: '#9cd3f5' }); }
+  else if (t && t.type === 'bull') { pts = t.pts; text = 'TAM İSABET! +' + money(pts); color = '#f2c230'; beep(523, 0.12, 'square', 0.05); beep(784, 0.2, 'square', 0.05, 0.12); }
+  else if (p.chute) { pts = 50; text = 'Yumuşak iniş +' + money(50); }
+  else { text = 'Ayy! Toz duman'; color = '#ffb070'; noise(0.3, 0.16); for (let i = 0; i < 14; i++) K.parts.push({ x: p.x, y: 0, vx: rand(-120, 120), vy: rand(60, 200), t: 0.8, color: '#c9b98a' }); }
+  if (p.chute && t && t.type !== 'tramp') { pts += 100; text += ' · paraşüt +₺100'; }
+  kAward(pts, text, color);
+  K.landed.push({ x: p.x, y: p.y, color: p.color, type: t ? t.type : 'ground', dizzy: !t && !p.chute, t: 0 });
+  K.wait = 1.5;
+}
+function updateCat(dt) {
+  G.time += dt;
+  const held = input.gas || kHeld;
+  if (K.done) { K.endT -= dt; if (K.endT <= 0) finishCat(); }
+  else if (!K.proj && K.wait <= 0) {
+    if (K.left <= 0) { K.done = true; K.endT = 2.6; G.pax = 0; toast('Bitti! Mancınık kazancı: ' + money(K.earned), 2.6, '#f2c230'); }
+    else {
+      if (input.left) K.angle = Math.min(80, K.angle + 35 * dt);
+      if (input.right) K.angle = Math.max(15, K.angle - 35 * dt);
+      if (held) {
+        K.charging = true; K.power += K.pdir * 70 * dt;
+        if (K.power > 100) { K.power = 100; K.pdir = -1; } if (K.power < 0) { K.power = 0; K.pdir = 1; }
+      } else if (K.charging) kFire();
+    }
+  }
+  if (K.armT > 0) { K.armT -= dt; K.arm = ARM_COCK + (ARM_REL - ARM_COCK) * clamp(1 - K.armT / 0.18, 0, 1); }
+  else if (!K.proj) K.arm += (ARM_COCK - K.arm) * Math.min(1, dt * 3);
+  const p = K.proj;
+  if (p && p.state === 'fly') {
+    if (p.chute) { p.vy = Math.max(p.vy - KG * 0.3 * dt, -160); p.vx += (K.wind * 1.5 - p.vx) * Math.min(1, dt * 0.7); p.rot += (0 - p.rot) * Math.min(1, dt * 5); }
+    else { p.vy -= KG * dt; p.vx += K.wind * 0.35 * dt; p.rot += p.vr * dt; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.x > 2700) { p.x = 2700; p.vx = -Math.abs(p.vx) * 0.3; }
+    const t = KT.find(t => p.x >= t.x0 && p.x <= t.x1);
+    if (p.vy < 0 && p.y <= (t ? t.top : 0)) kLand(t);
+  } else if (p && p.state === 'landed') {
+    K.wait -= dt; if (K.wait <= 0) K.proj = null;
+  }
+  const target = p ? clamp(p.x - 520, 0, 2200) : 0;
+  K.camX += (target - K.camX) * Math.min(1, dt * (p ? 4 : 2));
+  for (const q of K.parts) { q.vy -= KG * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.t -= dt; }
+  K.parts = K.parts.filter(q => q.t > 0 && q.y > -20);
+  for (const l of K.landed) l.t += dt;
+}
+function finishCat() {
+  if (K.from === 'route') { endGame(true); return; }
+  G.mode = 'roam'; K = null; setControls();
+  toast('Şehre geri döndün. Duraklardan yeni yolcu topla!', 2.6, '#f2c230');
+}
+function kPerson(x, y, s, rot, color, opts = {}) { // ekran koordinatı, ayak noktası
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = '#2b2e35'; ctx.lineWidth = 3 * s; ctx.lineCap = 'round';
+  const fl = opts.flail ? Math.sin(G.time * 22) * 0.9 : 0;
+  ctx.beginPath(); ctx.moveTo(-4 * s, -14 * s); ctx.lineTo(-6 * s - fl * 4 * s, 0); ctx.moveTo(4 * s, -14 * s); ctx.lineTo(6 * s + fl * 4 * s, 0); ctx.stroke();
+  ctx.fillStyle = color; rr(-7 * s, -34 * s, 14 * s, 21 * s, 4 * s); ctx.fill();
+  ctx.strokeStyle = '#e0b48a'; ctx.lineWidth = 2.6 * s;
+  const arm = opts.up ? -1 : opts.flail ? fl : 0.3;
+  ctx.beginPath(); ctx.moveTo(-6 * s, -30 * s); ctx.lineTo(-14 * s, (-30 + arm * 14) * s); ctx.moveTo(6 * s, -30 * s); ctx.lineTo(14 * s, (-30 + (opts.up ? -14 : -arm * 14)) * s); ctx.stroke();
+  ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -41 * s, 7 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = '#20252b'; ctx.beginPath(); ctx.arc(-2.4 * s, -42 * s, 1.1 * s, 0, 7); ctx.arc(2.4 * s, -42 * s, 1.1 * s, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -38 * s, (opts.flail ? 2.4 : 1.6) * s, 0, Math.PI * (opts.flail ? 2 : 1)); ctx.fill();
+  ctx.restore();
+}
+function renderCat() {
+  const sx = wx => KOX + (wx - K.camX) * KS, sy = wy => KGY - wy * KS;
+  const sky = ctx.createLinearGradient(0, 90, 0, KGY);
+  sky.addColorStop(0, '#5b8ec6'); sky.addColorStop(1, '#e3ecf0');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, KGY);
+  // Ağrı Dağı (5.137 m) ve Küçük Ağrı
+  const mx = 300 - K.camX * KS * 0.12;
+  ctx.fillStyle = '#8a8f9c'; ctx.beginPath(); ctx.moveTo(mx - 330, KGY); ctx.lineTo(mx - 40, 250); ctx.lineTo(mx + 20, 246); ctx.lineTo(mx + 330, KGY); ctx.fill();
+  ctx.fillStyle = '#f5f7fa'; ctx.beginPath(); ctx.moveTo(mx - 112, 380); ctx.lineTo(mx - 40, 250); ctx.lineTo(mx + 20, 246); ctx.lineTo(mx + 104, 380); ctx.lineTo(mx + 60, 360); ctx.lineTo(mx + 20, 392); ctx.lineTo(mx - 20, 362); ctx.lineTo(mx - 70, 395); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#9da2ad'; ctx.beginPath(); ctx.moveTo(mx + 200, KGY); ctx.lineTo(mx + 380, 440); ctx.lineTo(mx + 560, KGY); ctx.fill();
+  ctx.fillStyle = 'rgba(32,37,43,.7)'; ctx.font = '600 11px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Ağrı Dağı · 5.137 m', mx - 10, 232);
+  // zemin
+  ctx.fillStyle = '#b3a46b'; ctx.fillRect(0, KGY, W, H - KGY);
+  ctx.fillStyle = '#8f8350'; ctx.fillRect(0, KGY, W, 4);
+  for (let m = 0; m <= 2600; m += 250) {
+    const x = sx(m); if (x < -20 || x > W + 20) continue;
+    ctx.fillStyle = '#6f6440'; ctx.fillRect(x - 1, KGY + 4, 2, 10);
+    ctx.fillStyle = '#4d452b'; ctx.font = '600 10px Rubik, sans-serif'; ctx.fillText(Math.round(m / 20) + ' m', x, KGY + 22);
+  }
+  // gümrük binası ve otobüs
+  if (sx(-120) > -10) {
+    ctx.fillStyle = '#c9ccd2'; ctx.fillRect(sx(-900), sy(260), (-120 + 900) * KS, 260 * KS);
+    ctx.fillStyle = '#e30a17'; ctx.fillRect(sx(-900), sy(260), (-120 + 900) * KS, 12 * KS);
+    ctx.fillStyle = '#20252b'; ctx.font = '10px Bungee, Impact, sans-serif'; ctx.fillText('GÜRBULAK', sx(-510), sy(200));
+    ctx.fillStyle = '#7d828b'; ctx.fillRect(sx(-760), sy(330), 3, 70 * KS + 0);
+    flag(sx(-760) + 3, sy(330), 34);
+    const sb = document.getElementById('sideBus');
+    ctx.drawImage(sb, sx(-680), sy(0) - 96, 250, 96);
+  }
+  // hedefler
+  for (const t of KT) {
+    const x0 = sx(t.x0), x1 = sx(t.x1); if (x1 < -10 || x0 > W + 10) continue;
+    if (t.type === 'hay') {
+      ctx.fillStyle = '#d9b44a'; rr(x0, sy(t.top), x1 - x0, t.top * KS, 6); ctx.fill();
+      ctx.strokeStyle = '#a8862d'; ctx.lineWidth = 2; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x0 + (x1 - x0) * i / 4, sy(t.top)); ctx.lineTo(x0 + (x1 - x0) * i / 4, KGY); ctx.stroke(); }
+    } else if (t.type === 'pool') {
+      ctx.fillStyle = '#f3f1ec'; ctx.fillRect(x0 - 4, KGY - 6, x1 - x0 + 8, 8);
+      ctx.fillStyle = '#3d9ad8'; ctx.fillRect(x0, KGY - 2, x1 - x0, 22);
+      ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(x0 + 8, KGY + 4, (x1 - x0) * 0.4, 3);
+    } else if (t.type === 'tramp') {
+      ctx.fillStyle = '#20252b'; ctx.fillRect(x0 + 6, sy(t.top), 4, t.top * KS); ctx.fillRect(x1 - 10, sy(t.top), 4, t.top * KS);
+      ctx.fillStyle = '#1d4e89'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, sy(t.top), (x1 - x0) / 2, 5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#20252b'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, sy(t.top), (x1 - x0) / 2 - 5, 2.5, 0, 0, 7); ctx.fill();
+    } else {
+      const n = 5; for (let i = 0; i < n; i++) { ctx.fillStyle = i % 2 ? '#f3f1ec' : '#e30a17'; ctx.fillRect(x0 + (x1 - x0) * i / n, KGY - 4, (x1 - x0) / n, 6); }
+      ctx.fillStyle = '#7d828b'; ctx.fillRect((x0 + x1) / 2 - 1, KGY - 70, 2, 66);
+      flag((x0 + x1) / 2 + 1, KGY - 70, 30);
+    }
+    ctx.fillStyle = '#20252b'; ctx.font = '700 10px Rubik, sans-serif'; ctx.fillText(t.name + ' ' + money(t.pts), (x0 + x1) / 2, KGY + 36);
+  }
+  // mancınık
+  const px = sx(PIV[0]), py = sy(PIV[1]);
+  ctx.fillStyle = '#7a5230'; ctx.fillRect(sx(-30), sy(30), 140 * KS, 12 * KS);
+  ctx.beginPath(); ctx.moveTo(sx(-10), sy(30)); ctx.lineTo(px, py); ctx.lineTo(sx(90), sy(30)); ctx.lineTo(sx(80), sy(30)); ctx.lineTo(px, py + 6); ctx.lineTo(sx(0), sy(30)); ctx.fill();
+  ctx.fillRect(sx(28), sy(120), 6 * KS, 90 * KS); // durdurucu
+  ctx.fillStyle = '#4b3220'; for (const wx of [-10, 90]) { ctx.beginPath(); ctx.arc(sx(wx), sy(14), 14 * KS, 0, 7); ctx.fill(); }
+  const ex = px + Math.cos(K.arm) * 112 * KS, ey = py - Math.sin(K.arm) * 112 * KS;
+  ctx.strokeStyle = '#8b6038'; ctx.lineWidth = 9 * KS; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(px - Math.cos(K.arm) * 30 * KS, py + Math.sin(K.arm) * 30 * KS); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.fillStyle = '#5a3d24'; ctx.beginPath(); ctx.arc(ex, ey, 14 * KS, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3d3f46'; ctx.fillRect(px - Math.cos(K.arm) * 30 * KS - 9, py + Math.sin(K.arm) * 30 * KS - 6, 18, 18); // karşı ağırlık
+  if (!K.proj && !K.done && K.left > 0) kPerson(ex, ey - 2, 0.55, 0, kPersonColor(K.total - K.left), { up: K.charging });
+  // nişan çizgisi
+  if (!K.proj && !K.done && K.left > 0) {
+    const v0 = 350 + K.power * 7.2, a = K.angle * Math.PI / 180;
+    let x = PIV[0] + Math.cos(ARM_REL) * 112, y = PIV[1] + Math.sin(ARM_REL) * 112, vx = v0 * Math.cos(a), vy = v0 * Math.sin(a);
+    ctx.fillStyle = 'rgba(32,37,43,.55)';
+    for (let i = 0; i < 16; i++) { for (let k = 0; k < 4; k++) { vy -= KG * 0.016; x += vx * 0.016; y += vy * 0.016; } if (y < 0) break; ctx.beginPath(); ctx.arc(sx(x), sy(y), 2.2, 0, 7); ctx.fill(); }
+  }
+  // yere inmiş yolcular
+  for (const l of K.landed) {
+    const x = sx(l.x); if (x < -20 || x > W + 20) continue;
+    if (l.type === 'pool') { kPerson(x, sy(-8), 0.5, 0, l.color, { up: true }); ctx.fillStyle = '#3d9ad8'; ctx.fillRect(x - 10, KGY - 2, 20, 10); continue; }
+    kPerson(x, sy(l.y), 0.5, l.dizzy && l.t < 1.2 ? 1.4 : 0, l.color, { up: l.t > 0.8 && Math.floor(l.t * 3) % 2 === 0 });
+    if (l.dizzy && l.t < 2.5) { ctx.fillStyle = '#f2c230'; ctx.font = '12px Rubik, sans-serif'; ctx.fillText('★ ★', x + Math.sin(l.t * 8) * 5, sy(l.y) - 34); }
+  }
+  // uçan yolcu
+  const p = K.proj;
+  if (p) {
+    const x = sx(p.x), y = sy(p.y);
+    if (p.chute && p.state === 'fly') {
+      ctx.strokeStyle = '#3d3f46'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - 22, y - 58); ctx.lineTo(x, y - 30); ctx.lineTo(x + 22, y - 58); ctx.stroke();
+      for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#f3f1ec' : '#e30a17'; ctx.beginPath(); ctx.moveTo(x, y - 74); ctx.arc(x, y - 58, 26, Math.PI + i * Math.PI / 6, Math.PI + (i + 1) * Math.PI / 6); ctx.closePath(); ctx.fill(); }
+    }
+    if (p.state === 'fly') kPerson(x, y + 10, 0.55, p.rot, p.color, { flail: !p.chute, up: p.chute });
+    if (y < 96) { ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.moveTo(x, 98); ctx.lineTo(x - 7, 110); ctx.lineTo(x + 7, 110); ctx.fill(); }
+  }
+  for (const q of K.parts) { ctx.globalAlpha = clamp(q.t, 0, 1); ctx.fillStyle = q.color; ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), 3, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+function drawHUDCat() {
+  ctx.fillStyle = 'rgba(16,18,22,.86)'; ctx.fillRect(0, 0, W, 88);
+  ctx.fillStyle = '#d7262e'; ctx.fillRect(0, 88, W, 3);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#f2c230'; ctx.font = '20px Bungee, Impact, sans-serif'; ctx.fillText('MANCINIK', 12, 30);
+  ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Gürbulak Sınır Kapısı', 12, 46);
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 18px Rubik, sans-serif'; ctx.textAlign = 'right'; ctx.fillText('+' + money(K.earned), W - 12, 28);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif'; ctx.fillText('Kasa ' + money(G.money), W - 12, 46);
+  ctx.textAlign = 'left'; ctx.fillText('Sıradaki: ' + K.left + ' / ' + K.total + ' yolcu', 12, 66);
+  ctx.fillText('Açı ' + Math.round(K.angle) + '°', 170, 66);
+  ctx.fillText('Rüzgâr ' + (K.wind >= 0 ? '→ ' : '← ') + Math.abs(K.wind), 252, 66);
+  ctx.fillStyle = '#2c2f37'; rr(12, 74, W - 24, 8, 4); ctx.fill();
+  const pc = K.power > 75 ? '#ff4d4d' : K.power > 40 ? '#f29a30' : '#55c26f';
+  if (K.power > 0) { ctx.fillStyle = pc; rr(12, 74, Math.max(8, (W - 24) * K.power / 100), 8, 4); ctx.fill(); }
+  let msg = null;
+  if (K.proj && K.proj.state === 'fly' && !K.proj.chute) msg = 'PARAŞÜT\'e bas, rüzgârla süzül!';
+  else if (!K.proj && !K.done && K.left > 0) msg = K.charging ? 'Bırak ve fırlat!' : '◀ ▶ açı · FIRLAT basılı tut';
+  if (msg) {
+    ctx.fillStyle = 'rgba(242,194,48,.95)'; rr(12, 100, 230, 26, 13); ctx.fill();
+    ctx.fillStyle = '#15171c'; ctx.font = '700 13px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(msg, 127, 113.5);
+  }
+  drawToastFloats();
+}
+function setControls() {
+  const m = G ? G.mode : 'route';
+  document.getElementById('cHorn').textContent = m === 'catapult' ? 'PARAŞÜT' : 'KORNA';
+  document.getElementById('cGas').textContent = m === 'catapult' ? 'FIRLAT' : 'GAZ';
+  document.getElementById('cBrake').hidden = m === 'catapult';
+}
+
 // ---------- döngü ----------
 function frame(t) {
   if (!running) return;
@@ -1339,9 +2129,13 @@ function frame(t) {
   render();
   requestAnimationFrame(frame);
 }
-function start() {
+let lastMode = 'route';
+function start(mode) {
+  if (typeof mode !== 'string') mode = lastMode;
+  lastMode = mode;
   initAudio();
-  newGame();
+  newGame(mode);
+  setControls();
   document.getElementById('startScreen').hidden = true;
   document.getElementById('endScreen').hidden = true;
   document.getElementById('pauseScreen').hidden = true;
@@ -1355,7 +2149,14 @@ function togglePause() {
   if (paused) {
     drawBigMap('mapBig');
     const s = G.stops[G.si];
-    document.getElementById('pauseInfo').textContent = 'İstanbul\'dan ' + Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' km yol aldın' + (s ? ' · sıradaki otogar: ' + stopLabel(ROUTE.find(r => r.km >= s.km)) : '') + '. Mola yerinde çay içiliyor…';
+    document.getElementById('pauseInfo').textContent = G.mode === 'roam'
+      ? 'İstanbul şehir hattı · ' + G.pax + ' yolcu otobüste. Sarı noktalar yolcu bekleyen duraklar.'
+      : G.mode === 'catapult' ? 'Mancınık başında mola. ' + K.left + ' yolcu sırada bekliyor.'
+      : 'İstanbul\'dan ' + Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' km yol aldın' + (s ? ' · sıradaki otogar: ' + stopLabel(ROUTE.find(r => r.km >= s.km)) : '') + '. Mola yerinde çay içiliyor…';
+    const cb = document.getElementById('catBtn');
+    cb.hidden = G.mode !== 'roam'; cb.disabled = G.pax === 0;
+    cb.textContent = G.pax ? G.pax + ' Yolcuyu Mancınığa Götür' : 'Mancınık için yolcu topla';
+    document.getElementById('camBtn').hidden = G.mode !== 'route';
   }
   if (engGain && ac) engGain.gain.setTargetAtTime(paused ? 0 : 0.035, ac.currentTime, 0.05);
 }
@@ -1367,13 +2168,24 @@ function endGame(win, reason) {
   const isBest = score > best;
   if (isBest) { best = score; try { localStorage.setItem('zafer-best', String(best)); } catch (e) {} }
   render();
-  document.getElementById('endTitle').textContent = win ? 'Gürbulak Sınır Kapısı\'na vardık!' : 'Sefer yarıda kaldı';
-  document.getElementById('endReason').textContent = win
+  const roam = G.mode === 'roam' || (K && K.from === 'roam' && G.mode === 'catapult');
+  document.getElementById('endTitle').textContent = roam ? 'Şehir turu bitti' : win ? 'Gürbulak Sınır Kapısı\'na vardık!' : 'Sefer yarıda kaldı';
+  document.getElementById('endReason').textContent = roam
+    ? 'İstanbul sokaklarında ' + G.carried + ' yolcu taşıdın' + (G.launched ? ', ' + G.launched + ' yolcuyu mancınıkla uçurdun.' : '.')
+    : win
     ? (G.stars >= 4 ? 'İstanbul\'dan Türkiye\'nin doğu sınırına, 1.625 km. Zafer Turizm yolcuları memnun, muavin kolonya dağıtıyor.' : 'Sınıra vardık ama yolcular biraz söylendi.')
     : reason;
-  const rows = [
+  const rows = roam ? [
     ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
     ['Taşınan yolcu', G.carried],
+    ['Boşaltılan durak', G.served],
+    ['Mancınıkla uçan', G.launched],
+    ['Kaza', G.crashes],
+    ['En iyi kasa', money(best)]
+  ] : [
+    ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
+    ['Taşınan yolcu', G.carried],
+    ['Mancınıkla uçan', G.launched],
     ['Durak (uğranan / kaçan)', G.served + ' / ' + G.missed],
     ['Kaza', G.crashes],
     ['Firma puanı', '★'.repeat(G.stars) + '☆'.repeat(5 - G.stars)],
@@ -1386,8 +2198,12 @@ function endGame(win, reason) {
   drawBigMap('mapEnd');
   if (win) { beep(523, 0.15, 'square', 0.05); beep(659, 0.15, 'square', 0.05, 0.15); beep(784, 0.3, 'square', 0.05, 0.3); }
 }
-document.getElementById('startBtn').addEventListener('click', start);
-document.getElementById('againBtn').addEventListener('click', start);
+document.getElementById('startBtn').addEventListener('click', () => start('route'));
+document.getElementById('roamBtn').addEventListener('click', () => start('roam'));
+document.getElementById('againBtn').addEventListener('click', () => start());
+document.getElementById('menuBtn').addEventListener('click', () => { document.getElementById('endScreen').hidden = true; document.getElementById('startScreen').hidden = false; });
+document.getElementById('catBtn').addEventListener('click', () => { if (G.pax > 0) { togglePause(); startCatapult(); } });
+document.getElementById('quitBtn').addEventListener('click', () => { paused = false; document.getElementById('pauseScreen').hidden = true; endGame(G.mode !== 'route', 'Seferi yarıda bıraktın.'); });
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
 function setCamLabel() { document.getElementById('camBtn').textContent = 'Kamera: ' + (camMode === 'arka' ? 'Arkadan' : 'Kuşbakışı'); }
 function toggleCam() {
@@ -1397,8 +2213,11 @@ function toggleCam() {
 }
 document.getElementById('camBtn').addEventListener('click', toggleCam);
 setCamLabel();
+cvs.addEventListener('pointerup', () => { kHeld = false; });
+cvs.addEventListener('pointercancel', () => { kHeld = false; });
 cvs.addEventListener('pointerdown', e => {
   if (!running || paused) return;
+  if (G.mode === 'catapult') { initAudio(); if (K.proj && K.proj.state === 'fly') kChute(); else kHeld = true; return; }
   const r = cvs.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
   if (x > MINI.x - 6 && x < MINI.x + MINI.w + 6 && y > MINI.y - 6 && y < MINI.y + MINI.h + 20) togglePause();
 });
