@@ -1,0 +1,793 @@
+<meta charset="utf-8">
+<title>Zafer Turizm</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Layout: tek ekranlı oyun — üstte yol tuvali, altta dokunmatik kumanda şeridi; menüler tuvalin üstüne biner */
+:root {
+  --bg: #15171c;        /* gece asfaltı */
+  --panel: #22252d;
+  --line: #3a3e49;
+  --fg: #f3f1ec;
+  --muted: #a9adb8;
+  --red: #d7262e;       /* Zafer Turizm kırmızısı */
+  --gold: #f2c230;      /* durak sarısı */
+  --green: #2f8f4e;
+  --display: "Bungee", "Arial Black", Impact, sans-serif;
+  --body: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body);
+  margin: 0; overflow: hidden; -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent; touch-action: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+#app {
+  height: 100%; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; padding-block: 8px; box-sizing: border-box;
+}
+#stage { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / .5); flex: none; }
+#game { display: block; width: 100%; height: 100%; }
+
+.overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; padding: 24px 20px; box-sizing: border-box; text-align: center;
+  background: linear-gradient(180deg, rgb(21 23 28 / .92), rgb(21 23 28 / .97));
+}
+.brand { font-family: var(--display); font-size: clamp(30px, 9vw, 44px); line-height: 1; margin: 0; letter-spacing: .01em; color: var(--fg); text-wrap: balance; }
+.brand span { color: var(--red); }
+.tag { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); margin: 0; font-weight: 700; }
+#sideBus { width: 100%; max-width: 340px; height: auto; }
+.howto { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; text-align: left; font-size: 13px; color: var(--muted); max-width: 300px; margin: 0; }
+.howto dt { color: var(--fg); font-weight: 700; white-space: nowrap; }
+.howto dd { margin: 0; }
+.btn {
+  font-family: var(--display); font-size: 18px; color: var(--fg); background: var(--red);
+  border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer; box-shadow: 0 4px 0 #8f161c;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8f161c; }
+.btn:focus-visible, .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.small { font-size: 12px; color: var(--muted); margin: 0; }
+.stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; font-size: 15px; min-width: 220px; margin: 0; font-variant-numeric: tabular-nums; }
+.stats dt { text-align: left; color: var(--muted); }
+.stats dd { margin: 0; text-align: right; font-weight: 700; }
+#endTitle { font-family: var(--display); font-size: 28px; margin: 0; color: var(--gold); text-wrap: balance; }
+#endReason { margin: 0; color: var(--muted); max-width: 300px; }
+
+#controls { display: flex; justify-content: space-between; gap: 8px; flex: none; }
+.ctl-group { display: flex; gap: 8px; }
+.ctl {
+  font-family: var(--display); font-size: 15px; color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px; width: 62px; height: 62px; cursor: pointer;
+  display: grid; place-items: center; padding: 0; touch-action: none;
+}
+.ctl.on { background: var(--line); }
+.ctl.gas { background: var(--green); border-color: #3fae63; width: 70px; }
+.ctl.brake { background: var(--red); border-color: #ee4950; width: 70px; }
+.ctl.horn { font-size: 11px; color: var(--gold); width: 58px; }
+.ctl.gas.on { background: #3fae63; } .ctl.brake.on { background: #ee4950; }
+@media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
+</style>
+
+<div id="app">
+  <div id="stage">
+    <canvas id="game" aria-label="Zafer Turizm otobüs oyunu"></canvas>
+
+    <section id="startScreen" class="overlay">
+      <p class="tag">Şehirlerarası Otobüs Şoförü</p>
+      <h1 class="brand"><span>ZAFER</span> TURİZM</h1>
+      <canvas id="sideBus" width="680" height="260"></canvas>
+      <dl class="howto">
+        <dt>Sefer</dt><dd>İstanbul'dan Erzurum'a, 9 otogar ve ara duraklar.</dd>
+        <dt>Durak</dt><dd>Sağ şeride geç, sarı cebin hizasında tam dur. Yolcular biner, bilet parası kasaya.</dd>
+        <dt>Korna</dt><dd>Önündeki araç şerit değiştirmeye çalışır.</dd>
+        <dt>Dikkat</dt><dd>Kaza hasar yapar, kaçan durak firma puanını düşürür.</dd>
+      </dl>
+      <button id="startBtn" class="btn" type="button">Sefere Başla</button>
+      <p class="small" id="bestLine">Klavye: ← → direksiyon · ↑ gaz · ↓ fren · Boşluk korna · P mola</p>
+    </section>
+
+    <section id="endScreen" class="overlay" hidden>
+      <h2 id="endTitle">Sefer Tamamlandı</h2>
+      <p id="endReason"></p>
+      <dl class="stats" id="endStats"></dl>
+      <button id="againBtn" class="btn" type="button">Yeni Sefer</button>
+    </section>
+
+    <section id="pauseScreen" class="overlay" hidden>
+      <h2 class="brand" style="font-size:30px">MOLA</h2>
+      <p class="small">Mola yerinde çay içiliyor…</p>
+      <button id="resumeBtn" class="btn" type="button">Devam Et</button>
+    </section>
+  </div>
+
+  <div id="controls">
+    <div class="ctl-group">
+      <button class="ctl" id="cLeft" type="button" aria-label="Sola">◀</button>
+      <button class="ctl" id="cRight" type="button" aria-label="Sağa">▶</button>
+    </div>
+    <button class="ctl horn" id="cHorn" type="button">KORNA</button>
+    <div class="ctl-group">
+      <button class="ctl brake" id="cBrake" type="button">FREN</button>
+      <button class="ctl gas" id="cGas" type="button">GAZ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- sabitler ----------
+const W = 420, H = 740;
+const ROAD_L = 60, ROAD_R = 360;
+const LANES = [110, 210, 310];
+const PXKM = 2000;          // 1 oyun km = 2000 piksel
+const PXS = 4.5;            // km/sa başına piksel/sn
+const MAXV = 130, CAP = 46, FARE = 250;
+const BUS = { w: 58, h: 150, y: H - 205 };
+const BUS_CY = BUS.y + BUS.h / 2;
+const ROUTE = [
+  { n: 'İstanbul', km: 0 }, { n: 'İzmit', km: 9 }, { n: 'Sakarya', km: 17 },
+  { n: 'Bolu', km: 27 }, { n: 'Ankara', km: 38 }, { n: 'Kırıkkale', km: 46 },
+  { n: 'Yozgat', km: 55 }, { n: 'Sivas', km: 65 }, { n: 'Erzincan', km: 76 },
+  { n: 'Erzurum', km: 87 }
+];
+const CAR_COLORS = ['#e8e4da', '#2b6cb0', '#9b2c2c', '#1f1f24', '#8a8f99', '#c97b2a', '#2f855a', '#6b46c1'];
+const trUpper = s => s.toLocaleUpperCase('tr-TR');
+const money = n => '₺' + Math.round(n).toLocaleString('tr-TR');
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ---------- tuval ----------
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const stage = document.getElementById('stage');
+const controls = document.getElementById('controls');
+const app = document.getElementById('app');
+let scale = 1;
+function resize() {
+  const availW = app.clientWidth;
+  const availH = app.clientHeight - controls.offsetHeight - 26;
+  scale = Math.max(0.3, Math.min(availW / W, availH / H));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  stage.style.width = (W * scale) + 'px';
+  stage.style.height = (H * scale) + 'px';
+  controls.style.width = Math.max(W * scale, 300) + 'px';
+  cvs.width = Math.round(W * scale * dpr);
+  cvs.height = Math.round(H * scale * dpr);
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  if (!running) render();
+}
+window.addEventListener('resize', resize);
+
+// ---------- ses ----------
+let ac = null, engOsc = null, engGain = null;
+function initAudio() {
+  if (ac) { ac.resume && ac.resume(); return; }
+  try {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    engOsc = ac.createOscillator(); engOsc.type = 'sawtooth';
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+    engGain = ac.createGain(); engGain.gain.value = 0;
+    engOsc.connect(lp); lp.connect(engGain); engGain.connect(ac.destination);
+    engOsc.start();
+  } catch (e) { ac = null; }
+}
+function beep(freq, dur, type = 'square', vol = 0.06, delay = 0) {
+  if (!ac) return;
+  const t = ac.currentTime + delay;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur = 0.45, vol = 0.25) {
+  if (!ac) return;
+  const len = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+  const s = ac.createBufferSource(), g = ac.createGain();
+  g.gain.value = vol; s.buffer = buf; s.connect(g); g.connect(ac.destination); s.start();
+}
+function hornSound() { beep(330, 0.38, 'square', 0.05); beep(415, 0.38, 'square', 0.05); }
+function coinSound() { beep(988, 0.08, 'square', 0.04); beep(1319, 0.12, 'square', 0.04, 0.07); }
+
+// ---------- girdi ----------
+const input = { left: false, right: false, gas: false, brake: false };
+const keyMap = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'gas', KeyW: 'gas', ArrowDown: 'brake', KeyS: 'brake' };
+window.addEventListener('keydown', e => {
+  if (keyMap[e.code]) { input[keyMap[e.code]] = true; e.preventDefault(); }
+  if (e.code === 'Space' || e.code === 'KeyH') { if (running) honk(); e.preventDefault(); }
+  if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+});
+window.addEventListener('keyup', e => { if (keyMap[e.code]) input[keyMap[e.code]] = false; });
+function bindHold(id, key) {
+  const el = document.getElementById(id);
+  const on = e => { e.preventDefault(); input[key] = true; el.classList.add('on'); initAudio(); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const off = () => { input[key] = false; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', on);
+  el.addEventListener('pointerup', off);
+  el.addEventListener('pointercancel', off);
+  el.addEventListener('lostpointercapture', off);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+bindHold('cLeft', 'left'); bindHold('cRight', 'right'); bindHold('cGas', 'gas'); bindHold('cBrake', 'brake');
+document.getElementById('cHorn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); if (running) honk(); });
+
+// ---------- oyun durumu ----------
+let G = null, running = false, paused = false, last = 0;
+let best = 0;
+try { best = +localStorage.getItem('zafer-best') || 0; } catch (e) {}
+
+function buildStops() {
+  const stops = [];
+  for (let i = 1; i < ROUTE.length; i++) {
+    const a = ROUTE[i - 1].km, b = ROUTE[i].km;
+    let k = a + rand(2.2, 3);
+    while (k < b - 2) {
+      stops.push({ km: k, terminal: false, name: ROUTE[i - 1].n + ' – ' + ROUTE[i].n + ' yolu', waiting: Math.floor(rand(2, 8)) });
+      k += rand(2.6, 3.6);
+    }
+    stops.push({ km: b, terminal: true, city: ROUTE[i].n, name: ROUTE[i].n + ' Otogarı', waiting: i === ROUTE.length - 1 ? 0 : Math.floor(rand(8, 17)), final: i === ROUTE.length - 1 });
+  }
+  stops.forEach(s => { s.arrived = false; s.done = false; s.alight = 0; s.boarded = 0; });
+  return stops;
+}
+
+function newGame() {
+  G = {
+    dist: 0, speed: 0, x: LANES[2], tilt: 0, roadOff: 0,
+    money: 0, pax: 12, carried: 0, stars: 5, damage: 0,
+    served: 0, missed: 0, crashes: 0, time: 0,
+    cars: [], floats: [], spawnT: 1.2, inv: 0, shake: 0, hornCd: 0,
+    stops: buildStops(), si: 0, boardT: 0,
+    toast: null, lastCity: 0, braking: false, doors: 0
+  };
+  toast('İstanbul Otogarı\'ndan hareket! İyi yolculuklar.', 3);
+}
+
+function toast(text, dur = 2.2, color = '#f3f1ec') { G.toast = { text, t: dur, max: dur, color }; }
+function float(text, x, y, color) { G.floats.push({ text, x, y, t: 1.1, color }); }
+function legIndex() { let i = 0; while (i < ROUTE.length - 1 && G.dist >= ROUTE[i + 1].km) i++; return i; }
+
+// ---------- trafik ----------
+function laneFree(L, car) {
+  const top = car.y - 150, bot = car.y + car.h + 150;
+  for (const c of G.cars) {
+    if (c === car) continue;
+    if ((Math.abs(c.x - L) < 55 || Math.abs(c.tx - L) < 55) && c.y < bot && c.y + c.h > top) return false;
+  }
+  if (Math.abs(G.x - L) < 70 && BUS.y < car.y + car.h + 70 && BUS.y + BUS.h > car.y - 70) return false;
+  return true;
+}
+function tryLaneChange(car) {
+  if (car.truck && Math.random() < 0.5) return false;
+  const i = LANES.indexOf(car.tx);
+  const opts = [i - 1, i + 1].filter(j => j >= 0 && j < LANES.length);
+  if (Math.random() < 0.5) opts.reverse();
+  for (const j of opts) if (laneFree(LANES[j], car)) { car.tx = LANES[j]; return true; }
+  return false;
+}
+function spawnCar() {
+  const fromTop = G.speed > 45 && (G.speed > 95 || Math.random() < 0.7);
+  if (!fromTop && G.speed > 105) return;
+  const r = Math.random();
+  const type = r < 0.16 ? 'truck' : r < 0.36 ? 'van' : 'car';
+  const dims = type === 'truck' ? [60, 172] : type === 'van' ? [50, 98] : [44, 80];
+  let base;
+  if (fromTop) base = type === 'truck' ? rand(45, Math.min(75, G.speed - 8)) : rand(45, Math.min(100, G.speed - 8));
+  else base = Math.min(140, G.speed + rand(18, 40)) * (type === 'truck' ? 0.85 : 1);
+  if (!fromTop && base <= G.speed + 5) return;
+  const L = LANES[Math.floor(Math.random() * 3)];
+  const y = fromTop ? -dims[1] - 30 : H + 30;
+  // aynı şeritte yakın araç varsa doğurma
+  for (const c of G.cars) if (Math.abs(c.x - L) < 55 && Math.abs(c.y - y) < 260) return;
+  if (!fromTop && Math.abs(G.x - L) < 60) return; // otobüsün hemen arkasından doğma
+  G.cars.push({
+    x: L, tx: L, y, w: dims[0], h: dims[1], base, speed: base, type, truck: type === 'truck',
+    color: type === 'truck' ? ['#e0ddd5', '#c94a3a', '#3b5f8a'][Math.floor(rand(0, 3))] : CAR_COLORS[Math.floor(rand(0, CAR_COLORS.length))],
+    blocked: 0, boost: 0, blink: 0
+  });
+}
+function updateCars(dt) {
+  for (const c of G.cars) {
+    let target = c.base + (c.boost > 0 ? 40 : 0);
+    let blocked = false;
+    // öndeki araçları takip et
+    for (const o of G.cars) {
+      if (o === c || Math.abs(o.x - c.x) > 48 || o.y >= c.y) continue;
+      const gap = c.y - (o.y + o.h);
+      if (gap < 130) { target = Math.min(target, o.speed - (gap < 50 ? 12 : 0)); blocked = true; }
+    }
+    // otobüsün arkasındaysa yavaşla
+    if (c.y > BUS.y && Math.abs(c.x - G.x) < 54) {
+      const gap = c.y - (BUS.y + BUS.h);
+      if (gap < 150) { target = Math.min(target, G.speed - (gap < 60 ? 15 : 0)); blocked = true; }
+    }
+    target = Math.max(0, target);
+    c.speed += clamp(target - c.speed, -120 * dt, 40 * dt);
+    if (blocked) { c.blocked += dt; if (c.blocked > 1.2) { if (tryLaneChange(c)) c.blink = 1.2; c.blocked = 0; } }
+    else c.blocked = 0;
+    c.boost -= dt; c.blink -= dt;
+    c.y += (G.speed - c.speed) * PXS * dt;
+    const dx = c.tx - c.x; c.x += clamp(dx, -110 * dt, 110 * dt);
+  }
+  G.cars = G.cars.filter(c => c.y < H + 260 && c.y > -700);
+}
+function honk() {
+  if (G.hornCd > 0) return;
+  G.hornCd = 0.6; hornSound();
+  let n = 0;
+  for (const c of G.cars) {
+    if (c.y < BUS.y && c.y > BUS.y - 380 && Math.abs(c.x - G.x) < 60) {
+      if (tryLaneChange(c)) { c.blink = 1.2; n++; }
+    }
+  }
+  if (n) float('Yol ver!', G.x, BUS.y - 20, '#f2c230');
+}
+
+// ---------- duraklar ----------
+function stopY(s) { return BUS_CY - (s.km - G.dist) * PXKM; } // durağın cep ortası (ekran y)
+function updateStops(dt) {
+  const s = G.stops[G.si];
+  if (!s) return;
+  const dy = (s.km - G.dist) * PXKM; // pozitif: durak önde
+  const inLane = G.x > 280;
+  const aligned = Math.abs(dy) < 45 && inLane && G.speed < 2;
+  G.doors += ((aligned ? 1 : 0) - G.doors) * Math.min(1, dt * 6);
+  if (aligned) {
+    if (!s.arrived) {
+      s.arrived = true;
+      s.alight = s.final ? G.pax : s.terminal ? Math.floor(G.pax * rand(0.4, 0.7)) : Math.floor(rand(0, Math.min(5, G.pax + 1)));
+      toast(s.terminal ? s.name + '\'na hoş geldiniz!' : 'Durakta: kapılar açıldı', 1.8, '#f2c230');
+      beep(660, 0.12, 'triangle', 0.06); beep(520, 0.15, 'triangle', 0.06, 0.12);
+    }
+    G.boardT -= dt;
+    if (G.boardT <= 0) {
+      G.boardT = 0.28;
+      if (s.alight > 0) { s.alight--; G.pax--; float('İndi', G.x + 50, BUS_CY + 20, '#a9adb8'); beep(300, 0.05, 'triangle', 0.04); }
+      else if (s.waiting > 0 && G.pax < CAP) {
+        s.waiting--; G.pax++; G.carried++; s.boarded++; G.money += FARE;
+        float('+' + money(FARE), G.x + 46, BUS_CY - 10, '#7be08f'); coinSound();
+      } else finishStop(s);
+    }
+  } else if (s.arrived && !s.done && Math.abs(dy) >= 45 && s.waiting === 0 && s.alight === 0) {
+    finishStop(s);
+  }
+  if (!s.done && dy < -130) {
+    // durak geride kaldı
+    if (s.waiting > 0 || !s.arrived) {
+      const loss = s.terminal ? 2 : 1;
+      G.stars = Math.max(0, G.stars - loss); G.missed++;
+      toast((s.terminal ? s.name + ' kaçırıldı! ' : 'Durağı kaçırdın! ') + '−' + loss + '★', 2.4, '#ff6b6b');
+      beep(220, 0.25, 'sawtooth', 0.05);
+    }
+    s.done = true; G.si++;
+    if (s.final) return endGame(true);
+    if (G.stars <= 0) return endGame(false, 'Çok fazla durak kaçtı, yolcular şikâyet etti. Firma puanı sıfırlandı.');
+  }
+}
+function finishStop(s) {
+  if (s.done) return;
+  s.done = true; G.si++; G.served++;
+  const bonus = s.terminal ? 400 : 100;
+  G.money += bonus;
+  toast((s.terminal ? 'Otogar' : 'Durak') + ' tamam! Dakiklik primi +' + money(bonus), 2, '#7be08f');
+  if (s.final) setTimeout(() => endGame(true), 600);
+}
+
+// ---------- güncelleme ----------
+function update(dt) {
+  G.time += dt;
+  const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  if (input.gas) G.speed += 28 * dt * (1 - G.speed / (MAXV + 25));
+  if (input.brake) G.speed -= 85 * dt;
+  if (!input.gas && !input.brake) G.speed -= 5 * dt;
+  G.speed = clamp(G.speed, 0, MAXV);
+  G.braking = input.brake;
+  const lat = 230 * clamp(G.speed / 25, 0.3, 1);
+  G.x = clamp(G.x + steer * lat * dt, ROAD_L + BUS.w / 2 + 4, ROAD_R - BUS.w / 2 - 4);
+  G.tilt += (steer * 0.07 * clamp(G.speed / 40, 0, 1) - G.tilt) * Math.min(1, dt * 8);
+
+  const px = G.speed * PXS * dt;
+  G.dist += px / PXKM; G.roadOff += px;
+
+  const leg = legIndex();
+  if (leg > G.lastCity) { G.lastCity = leg; }
+
+  G.spawnT -= dt;
+  if (G.spawnT <= 0) { G.spawnT = rand(0.7, 1.5) / (1 + leg * 0.1); if (G.cars.length < 9) spawnCar(); }
+  updateCars(dt);
+
+  // çarpışma
+  G.inv -= dt; G.hornCd -= dt; G.shake = Math.max(0, G.shake - dt);
+  if (G.inv <= 0) {
+    const bx = G.x - BUS.w / 2 + 4, by = BUS.y + 4, bw = BUS.w - 8, bh = BUS.h - 8;
+    for (const c of G.cars) {
+      const cx = c.x - c.w / 2 + 3, cy = c.y + 3, cw = c.w - 6, ch = c.h - 6;
+      if (bx < cx + cw && bx + bw > cx && by < cy + ch && by + bh > cy) {
+        const dmg = c.truck ? 34 : 22;
+        G.damage = Math.min(100, G.damage + dmg); G.crashes++;
+        G.money = Math.max(0, G.money - 500);
+        G.speed *= 0.35; G.inv = 1.6; G.shake = 0.45;
+        if (c.y < BUS.y) { c.boost = 1.5; c.speed = Math.max(c.speed, G.speed + 30); }
+        else { c.speed = Math.max(0, G.speed - 20); }
+        if (Math.abs(c.x - G.x) > 30) c.tx = c.x < G.x ? LANES[Math.max(0, LANES.indexOf(c.tx) - 1)] : LANES[Math.min(2, LANES.indexOf(c.tx) + 1)];
+        noise(); toast('Kaza! Hasar %' + Math.round(G.damage) + ' · masraf −₺500', 2.2, '#ff6b6b');
+        if (G.damage >= 100) return endGame(false, 'Otobüs ağır hasar aldı ve servise çekildi.');
+        break;
+      }
+    }
+  }
+
+  updateStops(dt);
+  if (!running) return;
+  for (const f of G.floats) { f.t -= dt; f.y -= 40 * dt; }
+  G.floats = G.floats.filter(f => f.t > 0);
+  if (G.toast) { G.toast.t -= dt; if (G.toast.t <= 0) G.toast = null; }
+  if (engGain && ac) {
+    engOsc.frequency.setTargetAtTime(38 + G.speed * 0.85 + (input.gas ? 8 : 0), ac.currentTime, 0.1);
+    engGain.gain.setTargetAtTime(paused ? 0 : 0.035, ac.currentTime, 0.2);
+  }
+}
+
+// ---------- çizim yardımcıları ----------
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+function hash(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+
+function drawRoad() {
+  const off = G ? G.roadOff : 0;
+  // çimen
+  ctx.fillStyle = '#4c7536'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#56813d';
+  for (let k = Math.floor((off - H - 60) / 60); k <= Math.ceil((off + 60) / 60); k++) {
+    const y = off - k * 60; if (k % 2) { ctx.fillRect(0, y, ROAD_L - 6, 60); ctx.fillRect(ROAD_R + 6, y, W - ROAD_R, 60); }
+  }
+  // banket
+  ctx.fillStyle = '#8b8577'; ctx.fillRect(ROAD_L - 6, 0, 6, H); ctx.fillRect(ROAD_R, 0, 6, H);
+  // asfalt
+  ctx.fillStyle = '#3a3c42'; ctx.fillRect(ROAD_L, 0, ROAD_R - ROAD_L, H);
+  ctx.fillStyle = '#ecebe6'; ctx.fillRect(ROAD_L + 4, 0, 4, H); ctx.fillRect(ROAD_R - 8, 0, 4, H);
+  // şerit çizgileri
+  const d = off % 80;
+  ctx.fillStyle = '#ecebe6';
+  for (let y = d - 80; y < H; y += 80) { ctx.fillRect(158, y, 4, 42); ctx.fillRect(258, y, 4, 42); }
+  // ağaçlar ve direkler
+  for (let k = Math.floor((off - H - 120) / 150); k <= Math.ceil((off + 120) / 150); k++) {
+    const y = off - k * 150;
+    const h1 = hash(k), h2 = hash(k + 99);
+    tree(10 + h1 * 32, y + h2 * 40, 14 + h2 * 8);
+    if (h1 > 0.45) tree(380 + h2 * 28, y + 70, 12 + h1 * 8);
+  }
+}
+function tree(x, y, r) {
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.arc(x + 4, y + 5, r, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2f5a2a'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.fillStyle = '#3d7134'; ctx.beginPath(); ctx.arc(x - r * 0.25, y - r * 0.25, r * 0.6, 0, 7); ctx.fill();
+}
+
+function drawStops() {
+  for (let i = Math.max(0, G.si - 1); i < Math.min(G.stops.length, G.si + 2); i++) {
+    const s = G.stops[i];
+    const cy = stopY(s);
+    if (cy < -400 || cy > H + 300) continue;
+    const len = s.terminal ? 220 : 180, top = cy - len / 2;
+    // cep
+    ctx.fillStyle = 'rgba(242,194,48,.12)'; ctx.fillRect(264, top, 92, len);
+    ctx.strokeStyle = '#f2c230'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+    ctx.strokeRect(266, top, 88, len); ctx.setLineDash([]);
+    ctx.save(); ctx.translate(310, cy); ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#f2c230'; ctx.font = '22px Bungee, Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.terminal ? 'OTOGAR' : 'DURAK', 0, 0); ctx.restore();
+    // bekleme yeri
+    const sx = 366;
+    ctx.fillStyle = '#b7b2a6'; ctx.fillRect(sx, top + 10, 50, len - 20);
+    ctx.fillStyle = s.terminal ? '#1d4e89' : '#2563a8'; rr(sx + 4, cy - 34, 42, 68, 5); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = '700 11px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.terminal ? 'OTO' : 'D', sx + 25, cy - 20);
+    if (s.terminal) ctx.fillText('GAR', sx + 25, cy - 8);
+    // yolcular
+    const n = Math.min(s.waiting, 12);
+    for (let p = 0; p < n; p++) {
+      const px = sx + 10 + (p % 3) * 15, py = top + 22 + Math.floor(p / 3) * 16 + (p > 5 ? len - 120 : 0);
+      ctx.fillStyle = ['#e2574c', '#f2c230', '#4a90d9', '#7bc96f', '#d48bd9'][p % 5];
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.fill();
+      ctx.fillStyle = '#2b1d14'; ctx.beginPath(); ctx.arc(px, py, 2.6, 0, 7); ctx.fill();
+    }
+    if (s.waiting > 0) {
+      ctx.fillStyle = '#15171c'; rr(sx + 8, cy + 12, 34, 18, 9); ctx.fill();
+      ctx.fillStyle = '#f2c230'; ctx.font = '700 12px Rubik, sans-serif'; ctx.fillText(s.waiting, sx + 25, cy + 21.5);
+    }
+    // 300 m tabelası
+    const sy = BUS_CY - (s.km - 0.15 - G.dist) * PXKM;
+    if (sy > -60 && sy < H + 60 && !s.done) {
+      ctx.fillStyle = '#555'; ctx.fillRect(400, sy, 3, 26);
+      ctx.fillStyle = '#2563a8'; rr(386, sy - 30, 32, 32, 4); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '700 9px Rubik, sans-serif'; ctx.fillText('DURAK', 402, sy - 19); ctx.fillText('300m', 402, sy - 8);
+    }
+  }
+}
+
+function drawGantries() {
+  // şehir girişi üst geçit tabelası
+  for (let i = 1; i < ROUTE.length; i++) {
+    const y = BUS_CY - (ROUTE[i].km - 0.6 - G.dist) * PXKM;
+    if (y < -90 || y > H + 40) continue;
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ROAD_L + 6, y + 50, ROAD_R - ROAD_L, 8);
+    ctx.fillStyle = '#6d7076'; ctx.fillRect(ROAD_L - 6, y + 18, 6, 14); ctx.fillRect(ROAD_R, y + 18, 6, 14);
+    ctx.fillStyle = '#1e7a3e'; rr(ROAD_L + 8, y, ROAD_R - ROAD_L - 16, 48, 5); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; rr(ROAD_L + 12, y + 4, ROAD_R - ROAD_L - 24, 40, 3); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '16px Bungee, Impact, sans-serif'; ctx.fillText(trUpper(ROUTE[i].n) + ' OTOGARI', W / 2 - 18, y + 18);
+    ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('600 m · sağ şeritten girin', W / 2 - 18, y + 35);
+    ctx.font = '22px Rubik, sans-serif'; ctx.fillText('↗', ROAD_R - 34, y + 24);
+  }
+}
+
+function drawCar(c) {
+  const x = c.x - c.w / 2, y = c.y;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; rr(x + 4, y + 6, c.w, c.h, 8); ctx.fill();
+  if (c.truck) {
+    ctx.fillStyle = c.color; rr(x, y + 28, c.w, c.h - 28, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; for (let k = 0; k < 6; k++) ctx.fillRect(x + 4, y + 40 + k * 22, c.w - 8, 2);
+    ctx.fillStyle = '#c5492f'; rr(x + 3, y, c.w - 6, 30, 6); ctx.fill();
+    ctx.fillStyle = '#1b2733'; ctx.fillRect(x + 7, y + 4, c.w - 14, 9);
+    ctx.save(); ctx.translate(c.x, y + 100); ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.font = '12px Bungee, Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('NAKLİYAT', 0, 0); ctx.restore();
+  } else {
+    ctx.fillStyle = c.color; rr(x, y, c.w, c.h, c.type === 'van' ? 7 : 11); ctx.fill();
+    ctx.fillStyle = '#1b2733';
+    rr(x + 5, y + 14, c.w - 10, 15, 4); ctx.fill();
+    rr(x + 6, y + c.h - (c.type === 'van' ? 16 : 22), c.w - 12, 10, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.13)'; rr(x + 6, y + 32, c.w - 12, c.h - (c.type === 'van' ? 52 : 58), 4); ctx.fill();
+  }
+  // stop lambaları
+  const braking = c.speed < c.base - 5;
+  ctx.fillStyle = braking ? '#ff3b3b' : '#8a1c1c';
+  ctx.fillRect(x + 3, y + c.h - 4, 8, 4); ctx.fillRect(x + c.w - 11, y + c.h - 4, 8, 4);
+  // sinyal
+  if (c.blink > 0 && Math.floor(c.blink * 6) % 2 === 0) {
+    ctx.fillStyle = '#ffb21e';
+    const sx = c.tx < c.x ? x - 1 : x + c.w - 5;
+    ctx.fillRect(sx, y + 2, 6, 6); ctx.fillRect(sx, y + c.h - 8, 6, 6);
+  }
+}
+
+function drawBusTop(x, y, tilt, braking, doors, flash) {
+  const w = BUS.w, h = BUS.h;
+  ctx.save();
+  ctx.translate(x, y + h / 2); ctx.rotate(tilt); ctx.translate(-w / 2, -h / 2);
+  if (flash) ctx.globalAlpha = 0.45;
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; rr(5, 8, w, h, 10); ctx.fill();
+  // aynalar
+  ctx.fillStyle = '#1b1d22'; ctx.fillRect(-6, 10, 7, 4); ctx.fillRect(w - 1, 10, 7, 4);
+  // gövde
+  ctx.fillStyle = '#f7f6f2'; rr(0, 0, w, h, 10); ctx.fill();
+  // kırmızı yan şeritler
+  ctx.fillStyle = '#d7262e'; ctx.fillRect(0, 26, 7, h - 40); ctx.fillRect(w - 7, 26, 7, h - 40);
+  ctx.fillStyle = '#f2c230'; ctx.fillRect(7, 26, 2, h - 40); ctx.fillRect(w - 9, 26, 2, h - 40);
+  // ön cam
+  ctx.fillStyle = '#16212c'; rr(4, 3, w - 8, 15, 6); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(8, 6, 14, 3);
+  // arka cam
+  ctx.fillStyle = '#16212c'; rr(7, h - 11, w - 14, 7, 3); ctx.fill();
+  // klima ünitesi
+  ctx.fillStyle = '#d9d7d0'; rr(12, 26, w - 24, 22, 4); ctx.fill();
+  ctx.fillStyle = '#bdbab2'; for (let k = 0; k < 4; k++) ctx.fillRect(15, 29 + k * 5, w - 30, 2);
+  // tavan yazısı
+  ctx.save(); ctx.translate(w / 2, 96); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#d7262e'; ctx.font = '15px Bungee, Impact, sans-serif'; ctx.fillText('ZAFER', 0, -8);
+  ctx.fillStyle = '#23262d'; ctx.font = '10px Bungee, Impact, sans-serif'; ctx.fillText('TURİZM', 0, 9);
+  ctx.restore();
+  // farlar ve stoplar
+  ctx.fillStyle = '#fff6c9'; ctx.fillRect(4, -1, 10, 3); ctx.fillRect(w - 14, -1, 10, 3);
+  ctx.fillStyle = braking ? '#ff3030' : '#9b1d1d'; ctx.fillRect(3, h - 3, 11, 4); ctx.fillRect(w - 14, h - 3, 11, 4);
+  // kapılar (sağ taraf)
+  if (doors > 0.05) {
+    ctx.fillStyle = '#f2c230';
+    ctx.fillRect(w - 2, 22, 4 * doors + 1, 18); ctx.fillRect(w - 2, 82, 4 * doors + 1, 18);
+  }
+  ctx.restore();
+  if (braking && G && G.speed > 2) {
+    ctx.fillStyle = 'rgba(255,40,40,.18)'; ctx.fillRect(x - w / 2, y + h, w, 18);
+  }
+}
+
+function drawHUD() {
+  // üst panel
+  ctx.fillStyle = 'rgba(16,18,22,.86)'; ctx.fillRect(0, 0, W, 88);
+  ctx.fillStyle = '#d7262e'; ctx.fillRect(0, 88, W, 3);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  // hız
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '32px Bungee, Impact, sans-serif';
+  ctx.fillText(String(Math.round(G.speed)).padStart(3, ' '), 12, 42);
+  ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('km/sa', 14, 56);
+  // kasa & yolcu
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText(money(G.money), 102, 30);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 50);
+  // yıldızlar
+  ctx.textAlign = 'right'; ctx.font = '16px Rubik, sans-serif';
+  let st = ''; for (let i = 0; i < 5; i++) st += i < G.stars ? '★' : '☆';
+  ctx.fillStyle = '#f2c230'; ctx.fillText(st, W - 12, 28);
+  // hasar
+  ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Hasar', W - 112, 49);
+  ctx.fillStyle = '#2c2f37'; rr(W - 106, 40, 94, 10, 5); ctx.fill();
+  ctx.fillStyle = G.damage > 66 ? '#ff4d4d' : G.damage > 33 ? '#f29a30' : '#55c26f';
+  if (G.damage > 0) { rr(W - 106, 40, Math.max(10, 94 * G.damage / 100), 10, 5); ctx.fill(); }
+  // sonraki durak
+  const s = G.stops[G.si];
+  ctx.textAlign = 'left'; ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif';
+  if (s) {
+    const km = Math.max(0, s.km - G.dist);
+    const d = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+    ctx.fillText((s.terminal ? '◉ ' + s.name : '● Ara durak') + ' · ' + d + (s.waiting ? ' · ' + s.waiting + ' yolcu bekliyor' : ''), 12, 74);
+  }
+  // güzergah ilerlemesi
+  const total = ROUTE[ROUTE.length - 1].km, p = clamp(G.dist / total, 0, 1);
+  ctx.fillStyle = '#2c2f37'; ctx.fillRect(12, 81, W - 24, 3);
+  ctx.fillStyle = '#d7262e'; ctx.fillRect(12, 81, (W - 24) * p, 3);
+  for (const c of ROUTE) { ctx.fillStyle = G.dist >= c.km ? '#d7262e' : '#5b606c'; ctx.fillRect(12 + (W - 24) * c.km / total - 1, 79, 3, 7); }
+
+  // durak ipucu
+  if (s && !s.arrived) {
+    const dy = (s.km - G.dist) * PXKM;
+    if (dy < 650 && dy > -40) {
+      let msg = G.x <= 280 ? 'Sağ şeride geç →' : G.speed > 2 ? (dy < 160 ? 'FRENE BAS — dur!' : 'Yavaşla, sarı cepte dur') : 'Biraz daha ilerle';
+      if (Math.abs(dy) < 45 && G.x > 280 && G.speed >= 2) msg = 'Tam dur!';
+      ctx.fillStyle = 'rgba(242,194,48,.95)'; rr(W / 2 - 100, 100, 200, 26, 13); ctx.fill();
+      ctx.fillStyle = '#15171c'; ctx.font = '700 13px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(msg, W / 2, 113.5);
+    }
+  }
+  // bildirim
+  if (G.toast) {
+    const a = Math.min(1, G.toast.t * 3, (G.toast.max - G.toast.t) * 6 + 0.2);
+    ctx.globalAlpha = clamp(a, 0, 1);
+    ctx.font = '700 14px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = Math.min(W - 30, ctx.measureText(G.toast.text).width + 30);
+    ctx.fillStyle = 'rgba(16,18,22,.9)'; rr(W / 2 - tw / 2, 140, tw, 32, 16); ctx.fill();
+    ctx.fillStyle = G.toast.color; ctx.fillText(G.toast.text, W / 2, 156.5, W - 44);
+    ctx.globalAlpha = 1;
+  }
+  for (const f of G.floats) {
+    ctx.globalAlpha = clamp(f.t, 0, 1); ctx.fillStyle = f.color; ctx.font = '700 14px Rubik, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(f.text, clamp(f.x, 40, W - 40), f.y); ctx.globalAlpha = 1;
+  }
+}
+
+function render() {
+  if (!G) { ctx.fillStyle = '#4c7536'; ctx.fillRect(0, 0, W, H); drawRoad(); return; }
+  ctx.save();
+  if (G.shake > 0) ctx.translate(rand(-6, 6) * G.shake, rand(-6, 6) * G.shake);
+  drawRoad();
+  drawStops();
+  for (const c of G.cars) drawCar(c);
+  const flash = G.inv > 0 && Math.floor(G.inv * 10) % 2 === 0;
+  drawBusTop(G.x, BUS.y, G.tilt, G.braking, G.doors, flash);
+  drawGantries();
+  ctx.restore();
+  drawHUD();
+}
+
+// ---------- döngü ----------
+function frame(t) {
+  if (!running) return;
+  const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
+  if (!paused) update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+function start() {
+  initAudio();
+  newGame();
+  document.getElementById('startScreen').hidden = true;
+  document.getElementById('endScreen').hidden = true;
+  document.getElementById('pauseScreen').hidden = true;
+  running = true; paused = false; last = performance.now();
+  requestAnimationFrame(frame);
+}
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  document.getElementById('pauseScreen').hidden = !paused;
+  if (engGain && ac) engGain.gain.setTargetAtTime(paused ? 0 : 0.035, ac.currentTime, 0.05);
+}
+function endGame(win, reason) {
+  if (!running) return;
+  running = false;
+  if (engGain && ac) engGain.gain.setTargetAtTime(0, ac.currentTime, 0.1);
+  const score = G.money;
+  const isBest = score > best;
+  if (isBest) { best = score; try { localStorage.setItem('zafer-best', String(best)); } catch (e) {} }
+  render();
+  document.getElementById('endTitle').textContent = win ? 'Erzurum\'a vardık!' : 'Sefer yarıda kaldı';
+  document.getElementById('endReason').textContent = win
+    ? (G.stars >= 4 ? 'Zafer Turizm yolcuları memnun. Muavin kolonya dağıtıyor.' : 'Vardık ama yolcular biraz söylendi.')
+    : reason;
+  const rows = [
+    ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
+    ['Taşınan yolcu', G.carried],
+    ['Durak (uğranan / kaçan)', G.served + ' / ' + G.missed],
+    ['Kaza', G.crashes],
+    ['Firma puanı', '★'.repeat(G.stars) + '☆'.repeat(5 - G.stars)],
+    ['Yol', G.dist.toFixed(1).replace('.', ',') + ' / ' + ROUTE[ROUTE.length - 1].km + ' km'],
+    ['En iyi kasa', money(best)]
+  ];
+  const dl = document.getElementById('endStats'); dl.innerHTML = '';
+  for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); }
+  document.getElementById('endScreen').hidden = false;
+  if (win) { beep(523, 0.15, 'square', 0.05); beep(659, 0.15, 'square', 0.05, 0.15); beep(784, 0.3, 'square', 0.05, 0.3); }
+}
+document.getElementById('startBtn').addEventListener('click', start);
+document.getElementById('againBtn').addEventListener('click', start);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+document.addEventListener('visibilitychange', () => { if (document.hidden && running && !paused) togglePause(); });
+
+// ---------- açılış ekranı: yandan otobüs ----------
+function drawSideBus() {
+  const c = document.getElementById('sideBus'), g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const R = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  // yol
+  g.fillStyle = '#2a2d33'; g.fillRect(0, 222, 680, 38);
+  g.fillStyle = '#ecebe6'; for (let x = 10; x < 680; x += 70) g.fillRect(x, 238, 36, 4);
+  // gölge
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(340, 222, 300, 10, 0, 0, 7); g.fill();
+  // gövde
+  g.fillStyle = '#f7f6f2'; R(40, 30, 600, 180, 26); g.fill();
+  // ön burun eğimi
+  g.fillStyle = '#16212c';
+  g.beginPath(); g.moveTo(600, 44); g.quadraticCurveTo(632, 46, 636, 92); g.lineTo(636, 140); g.lineTo(596, 140); g.closePath(); g.fill();
+  // yan camlar
+  g.fillStyle = '#16212c'; R(60, 50, 520, 70, 10); g.fill();
+  g.strokeStyle = '#f7f6f2'; g.lineWidth = 5;
+  for (let x = 130; x < 580; x += 74) { g.beginPath(); g.moveTo(x, 50); g.lineTo(x, 120); g.stroke(); }
+  g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(70, 112); g.lineTo(120, 56); g.lineTo(150, 56); g.lineTo(100, 112); g.fill();
+  // kırmızı kurdele
+  g.fillStyle = '#d7262e';
+  g.beginPath(); g.moveTo(40, 150); g.bezierCurveTo(220, 130, 420, 190, 640, 140); g.lineTo(640, 168); g.bezierCurveTo(420, 214, 220, 158, 40, 180); g.closePath(); g.fill();
+  g.fillStyle = '#f2c230';
+  g.beginPath(); g.moveTo(40, 184); g.bezierCurveTo(220, 162, 420, 218, 640, 172); g.lineTo(640, 178); g.bezierCurveTo(420, 224, 220, 168, 40, 190); g.closePath(); g.fill();
+  // yazı
+  g.fillStyle = '#d7262e'; g.font = '40px Bungee, Impact, sans-serif'; g.textBaseline = 'alphabetic';
+  g.fillText('ZAFER', 70, 146 - 4);
+  g.fillStyle = '#23262d'; g.font = '22px Bungee, Impact, sans-serif'; g.fillText('TURİZM', 232, 142);
+  // kapılar
+  g.strokeStyle = '#c9c6bd'; g.lineWidth = 3; R(560, 126, 34, 84, 4); g.stroke(); R(300, 150, 34, 60, 4); g.stroke();
+  // far, stop
+  g.fillStyle = '#fff3b0'; R(622, 176, 16, 12, 4); g.fill();
+  g.fillStyle = '#b81d24'; R(40, 168, 10, 22, 3); g.fill();
+  // plaka
+  g.fillStyle = '#ffffff'; g.fillRect(596, 196, 40, 12); g.fillStyle = '#1d4e89'; g.fillRect(596, 196, 6, 12);
+  g.fillStyle = '#111'; g.font = '700 9px Rubik, sans-serif'; g.fillText('34 ZT 23', 604, 205);
+  // tekerlekler
+  for (const x of [150, 470, 540]) {
+    g.fillStyle = '#15171c'; g.beginPath(); g.arc(x, 212, 26, 0, 7); g.fill();
+    g.fillStyle = '#8b8f98'; g.beginPath(); g.arc(x, 212, 12, 0, 7); g.fill();
+    g.fillStyle = '#2b2e35'; g.beginPath(); g.arc(x, 212, 5, 0, 7); g.fill();
+  }
+}
+
+function showBest() {
+  if (best > 0) document.getElementById('bestLine').textContent = 'En iyi kasa: ' + money(best) + ' · Klavye: ← → ↑ ↓ · Boşluk korna · P mola';
+}
+showBest();
+resize();
+drawSideBus();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawSideBus(); if (!running) render(); });
+})();
+</script>
