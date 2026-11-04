@@ -53,6 +53,7 @@ body {
 }
 .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8f161c; }
 .btn:focus-visible, .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.map { width: 100%; max-width: 380px; height: auto; border-radius: 8px; border: 1px solid var(--line); }
 .small { font-size: 12px; color: var(--muted); margin: 0; }
 .stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; font-size: 15px; min-width: 220px; margin: 0; font-variant-numeric: tabular-nums; }
 .stats dt { text-align: left; color: var(--muted); }
@@ -84,25 +85,27 @@ body {
       <h1 class="brand"><span>ZAFER</span> TURİZM</h1>
       <canvas id="sideBus" width="680" height="260"></canvas>
       <dl class="howto">
-        <dt>Sefer</dt><dd>İstanbul'dan Erzurum'a, 9 otogar ve ara duraklar.</dd>
+        <dt>Sefer</dt><dd>İstanbul Boğazı'ndan geçip Gürbulak Sınır Kapısı'na: 1.625 km, 11 şehir.</dd>
         <dt>Durak</dt><dd>Sağ şeride geç, sarı cebin hizasında tam dur. Yolcular biner, bilet parası kasaya.</dd>
         <dt>Korna</dt><dd>Önündeki araç şerit değiştirmeye çalışır.</dd>
         <dt>Dikkat</dt><dd>Kaza hasar yapar, kaçan durak firma puanını düşürür.</dd>
       </dl>
       <button id="startBtn" class="btn" type="button">Sefere Başla</button>
-      <p class="small" id="bestLine">Klavye: ← → direksiyon · ↑ gaz · ↓ fren · Boşluk korna · P mola</p>
+      <p class="small" id="bestLine">Klavye: ← → direksiyon · ↑ gaz · ↓ fren · Boşluk korna · M harita</p>
     </section>
 
     <section id="endScreen" class="overlay" hidden>
       <h2 id="endTitle">Sefer Tamamlandı</h2>
       <p id="endReason"></p>
+      <canvas id="mapEnd" class="map" width="760" height="380"></canvas>
       <dl class="stats" id="endStats"></dl>
       <button id="againBtn" class="btn" type="button">Yeni Sefer</button>
     </section>
 
     <section id="pauseScreen" class="overlay" hidden>
       <h2 class="brand" style="font-size:30px">MOLA</h2>
-      <p class="small">Mola yerinde çay içiliyor…</p>
+      <canvas id="mapBig" class="map" width="760" height="380"></canvas>
+      <p class="small" id="pauseInfo">Mola yerinde çay içiliyor…</p>
       <button id="resumeBtn" class="btn" type="button">Devam Et</button>
     </section>
   </div>
@@ -132,12 +135,42 @@ const PXS = 4.5;            // km/sa başına piksel/sn
 const MAXV = 130, CAP = 46, FARE = 250;
 const BUS = { w: 58, h: 150, y: H - 205 };
 const BUS_CY = BUS.y + BUS.h / 2;
+// km: oyun kilometresi · real: İstanbul'dan gerçek karayolu mesafesi · lon/lat: gerçek konum
 const ROUTE = [
-  { n: 'İstanbul', km: 0 }, { n: 'İzmit', km: 9 }, { n: 'Sakarya', km: 17 },
-  { n: 'Bolu', km: 27 }, { n: 'Ankara', km: 38 }, { n: 'Kırıkkale', km: 46 },
-  { n: 'Yozgat', km: 55 }, { n: 'Sivas', km: 65 }, { n: 'Erzincan', km: 76 },
-  { n: 'Erzurum', km: 87 }
+  { n: 'İstanbul', km: 0, real: 0, lon: 28.89, lat: 41.04 },
+  { n: 'İzmit', km: 9, real: 111, lon: 29.92, lat: 40.77 },
+  { n: 'Sakarya', km: 17, real: 150, lon: 30.40, lat: 40.78 },
+  { n: 'Bolu', km: 27, real: 262, lon: 31.61, lat: 40.73 },
+  { n: 'Ankara', km: 38, real: 450, lon: 32.85, lat: 39.93 },
+  { n: 'Kırıkkale', km: 46, real: 530, lon: 33.52, lat: 39.85 },
+  { n: 'Yozgat', km: 55, real: 650, lon: 34.81, lat: 39.82 },
+  { n: 'Sivas', km: 65, real: 875, lon: 37.02, lat: 39.75 },
+  { n: 'Erzincan', km: 76, real: 1120, lon: 39.49, lat: 39.75 },
+  { n: 'Erzurum', km: 87, real: 1310, lon: 41.27, lat: 39.90 },
+  { n: 'Ağrı', km: 96, real: 1495, lon: 43.05, lat: 39.72 },
+  { n: 'Gürbulak', km: 105, real: 1625, lon: 44.42, lat: 39.45, label: 'Gürbulak Sınır Kapısı', border: true }
 ];
+const stopLabel = r => r.label || r.n + ' Otogarı';
+function realKm(km) {
+  for (let i = 1; i < ROUTE.length; i++) {
+    const a = ROUTE[i - 1], b = ROUTE[i];
+    if (km <= b.km) return a.real + (b.real - a.real) * clamp((km - a.km) / (b.km - a.km), 0, 1);
+  }
+  return ROUTE[ROUTE.length - 1].real;
+}
+function routePos(km) {
+  for (let i = 1; i < ROUTE.length; i++) {
+    const a = ROUTE[i - 1], b = ROUTE[i];
+    if (km <= b.km) { const t = clamp((km - a.km) / (b.km - a.km), 0, 1); return [a.lon + (b.lon - a.lon) * t, a.lat + (b.lat - a.lat) * t]; }
+  }
+  const z = ROUTE[ROUTE.length - 1]; return [z.lon, z.lat];
+}
+// Türkiye sınırı (sadeleştirilmiş gerçek koordinatlar, boylam/enlem)
+const TR_THRACE = [[26.04,40.72],[26.33,41.25],[26.36,41.71],[26.62,41.97],[27.25,42.09],[28.0,41.98],[28.25,41.6],[28.6,41.35],[29.05,41.23],[29.06,41.03],[28.75,40.97],[28.0,40.98],[27.5,40.97],[27.3,40.7],[26.75,40.42],[26.22,40.05],[26.18,40.32],[26.6,40.62],[26.1,40.6]];
+const TR_ANATOLIA = [[29.12,41.23],[29.9,41.15],[30.8,41.08],[31.4,41.3],[32.3,41.75],[33.3,42.0],[34.9,42.05],[35.15,42.02],[35.5,41.65],[36.3,41.35],[36.7,41.4],[37.5,41.1],[38.4,40.95],[39.7,41.0],[40.6,41.2],[41.55,41.52],[42.5,41.45],[43.4,41.1],[43.6,40.6],[43.7,40.1],[44.2,40.05],[44.78,39.71],[44.4,39.4],[44.1,39.0],[44.3,38.4],[44.4,37.8],[44.8,37.3],[44.25,37.25],[43.0,37.35],[42.36,37.1],[41.2,37.07],[40.0,36.85],[38.8,36.7],[38.0,36.83],[36.7,36.82],[36.6,36.25],[35.92,35.82],[35.8,36.3],[36.2,36.6],[35.8,36.75],[35.0,36.7],[34.6,36.8],[34.0,36.25],[33.0,36.1],[32.5,36.1],[32.0,36.5],[31.0,36.85],[30.6,36.85],[30.5,36.4],[30.1,36.2],[29.6,36.15],[29.1,36.6],[28.6,36.75],[28.0,36.6],[27.4,36.68],[27.6,37.0],[27.2,37.4],[27.0,37.8],[26.3,38.3],[26.8,38.45],[26.9,38.7],[26.7,39.0],[26.9,39.55],[26.07,39.48],[26.2,39.95],[26.4,40.15],[26.7,40.35],[27.3,40.4],[27.9,40.35],[28.6,40.4],[29.0,40.35],[29.4,40.45],[29.9,40.72],[29.4,40.78],[29.1,40.95]];
+const TR_VAN = [[42.3,38.6],[42.9,38.95],[43.4,38.7],[43.1,38.42],[42.5,38.45]];
+const TR_TUZ = [[33.2,38.95],[33.45,38.95],[33.55,38.65],[33.35,38.55],[33.2,38.7]];
+const NEIGHBORS = [['YUNANİSTAN',25.75,41.3],['BULGARİSTAN',27.0,42.15],['GÜRCİSTAN',43.0,41.75],['ERMENİSTAN',44.6,40.55],['İRAN',44.75,38.6],['IRAK',43.6,36.9],['SURİYE',38.6,36.3],['KARADENİZ',34.5,42.6],['AKDENİZ',32.5,35.6]];
 const CAR_COLORS = ['#e8e4da', '#2b6cb0', '#9b2c2c', '#1f1f24', '#8a8f99', '#c97b2a', '#2f855a', '#6b46c1'];
 const trUpper = s => s.toLocaleUpperCase('tr-TR');
 const money = n => '₺' + Math.round(n).toLocaleString('tr-TR');
@@ -204,7 +237,7 @@ const keyMap = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'ri
 window.addEventListener('keydown', e => {
   if (keyMap[e.code]) { input[keyMap[e.code]] = true; e.preventDefault(); }
   if (e.code === 'Space' || e.code === 'KeyH') { if (running) honk(); e.preventDefault(); }
-  if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+  if (e.code === 'KeyP' || e.code === 'Escape' || e.code === 'KeyM') togglePause();
 });
 window.addEventListener('keyup', e => { if (keyMap[e.code]) input[keyMap[e.code]] = false; });
 function bindHold(id, key) {
@@ -234,7 +267,7 @@ function buildStops() {
       stops.push({ km: k, terminal: false, name: ROUTE[i - 1].n + ' – ' + ROUTE[i].n + ' yolu', waiting: Math.floor(rand(2, 8)) });
       k += rand(2.6, 3.6);
     }
-    stops.push({ km: b, terminal: true, city: ROUTE[i].n, name: ROUTE[i].n + ' Otogarı', waiting: i === ROUTE.length - 1 ? 0 : Math.floor(rand(8, 17)), final: i === ROUTE.length - 1 });
+    stops.push({ km: b, terminal: true, city: ROUTE[i].n, name: stopLabel(ROUTE[i]), waiting: i === ROUTE.length - 1 ? 0 : Math.floor(rand(8, 17)), final: i === ROUTE.length - 1 });
   }
   stops.forEach(s => { s.arrived = false; s.done = false; s.alight = 0; s.boarded = 0; });
   return stops;
@@ -345,7 +378,7 @@ function updateStops(dt) {
     if (!s.arrived) {
       s.arrived = true;
       s.alight = s.final ? G.pax : s.terminal ? Math.floor(G.pax * rand(0.4, 0.7)) : Math.floor(rand(0, Math.min(5, G.pax + 1)));
-      toast(s.terminal ? s.name + '\'na hoş geldiniz!' : 'Durakta: kapılar açıldı', 1.8, '#f2c230');
+      toast(s.final ? 'Türkiye sınırına vardın! Yolcular iniyor.' : s.terminal ? s.city + ' · İstanbul\'dan ' + Math.round(realKm(s.km)).toLocaleString('tr-TR') + ' km' : 'Durakta: kapılar açıldı', 2.2, '#f2c230');
       beep(660, 0.12, 'triangle', 0.06); beep(520, 0.15, 'triangle', 0.06, 0.12);
     }
     G.boardT -= dt;
@@ -455,6 +488,7 @@ function drawRoad() {
   for (let k = Math.floor((off - H - 60) / 60); k <= Math.ceil((off + 60) / 60); k++) {
     const y = off - k * 60; if (k % 2) { ctx.fillRect(0, y, ROAD_L - 6, 60); ctx.fillRect(ROAD_R + 6, y, W - ROAD_R, 60); }
   }
+  if (G) drawWater();
   // banket
   ctx.fillStyle = '#8b8577'; ctx.fillRect(ROAD_L - 6, 0, 6, H); ctx.fillRect(ROAD_R, 0, 6, H);
   // asfalt
@@ -464,13 +498,126 @@ function drawRoad() {
   const d = off % 80;
   ctx.fillStyle = '#ecebe6';
   for (let y = d - 80; y < H; y += 80) { ctx.fillRect(158, y, 4, 42); ctx.fillRect(258, y, 4, 42); }
-  // ağaçlar ve direkler
+  if (!G) return;
+  // ağaçlar, şehir binaları, camiler
+  const stopNear = km => { const s = G.stops[G.si]; return s && Math.abs(s.km - km) < (s.terminal ? 0.09 : 0.075); };
   for (let k = Math.floor((off - H - 120) / 150); k <= Math.ceil((off + 120) / 150); k++) {
     const y = off - k * 150;
-    const h1 = hash(k), h2 = hash(k + 99);
-    tree(10 + h1 * 32, y + h2 * 40, 14 + h2 * 8);
-    if (h1 > 0.45) tree(380 + h2 * 28, y + 70, 12 + h1 * 8);
+    const km = G.dist + (BUS_CY - y) / PXKM;
+    if (km > BRIDGE[0] - 0.03 && km < BRIDGE[1] + 0.03) continue; // boğaz suyu
+    const h1 = hash(k), h2 = hash(k + 99), h3 = hash(k + 7);
+    const city = cityAt(km);
+    if (city) {
+      const ist = city.n === 'İstanbul';
+      if (ist && k % 9 === 4) galata(30, y + 40);
+      else if (ist && h1 > 0.62) mosque(30, y + 40, 25 + h2 * 4);
+      else { building(2, y, 52, 60 + h2 * 50, h1); if (h3 > 0.4) building(4, y + 118, 48, 28, h2); }
+      if (!stopNear(km)) {
+        if (ist && h3 > 0.78) mosque(390, y + 70, 22);
+        else building(368, y + 10, 50, 50 + h3 * 70, h3);
+      }
+      // sokak lambası
+      ctx.fillStyle = '#9a9ca2'; ctx.fillRect(ROAD_L - 4, y + 60, 2, 2); ctx.fillRect(ROAD_R + 2, y + 60, 2, 2);
+    } else {
+      tree(10 + h1 * 32, y + h2 * 40, 14 + h2 * 8);
+      if (h1 > 0.45 && !stopNear(km)) tree(380 + h2 * 28, y + 70, 12 + h1 * 8);
+    }
   }
+  drawBridge();
+}
+const BRIDGE = [0.9, 1.16]; // İstanbul Boğazı köprüsü (oyun km)
+function cityAt(km) {
+  for (const r of ROUTE) {
+    if (r.km === 0 ? km < 2.0 : km > r.km - 1.1 && km < r.km + 0.6) return r;
+  }
+  return null;
+}
+function building(x, y, w, h, s) {
+  const roofs = ['#b5523b', '#c0654a', '#8d8f94', '#a7a39a', '#9e4a36', '#b8b2a5'];
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + 4, y + 5, w, h);
+  ctx.fillStyle = roofs[Math.floor(s * roofs.length) % roofs.length]; ctx.fillRect(x, y, w, h);
+  if (s < 0.5) { // kiremit çatı sırtı
+    ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + w / 2, y + 4); ctx.lineTo(x + w / 2, y + h - 4); ctx.stroke();
+  } else { // düz beton çatı: su deposu, güneş paneli
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(x + 4, y + 4, w - 8, 2);
+    ctx.fillStyle = '#d8d6cf'; ctx.beginPath(); ctx.arc(x + w - 12, y + 14, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#29425e'; ctx.fillRect(x + 6, y + h - 20, 18, 12);
+  }
+}
+function mosque(cx, cy, r) {
+  ctx.fillStyle = '#d9d2c3'; ctx.fillRect(cx - r - 4, cy - r - 4, 2 * r + 8, 2 * r + 8);
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.arc(cx + 3, cy + 4, r * 0.75, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7d8b97'; ctx.beginPath(); ctx.arc(cx, cy, r * 0.75, 0, 7); ctx.fill();   // kurşun kubbe
+  ctx.fillStyle = '#93a1ad'; ctx.beginPath(); ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.35, 0, 7); ctx.fill();
+  for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { // yarım kubbeler + minareler
+    ctx.fillStyle = '#7d8b97'; ctx.beginPath(); ctx.arc(cx + dx * r * 0.62, cy + dy * r * 0.62, r * 0.22, 0, 7); ctx.fill();
+    ctx.fillStyle = '#f1ede4'; ctx.beginPath(); ctx.arc(cx + dx * (r + 1), cy + dy * (r + 1), 3.2, 0, 7); ctx.fill();
+    ctx.fillStyle = '#6c7884'; ctx.beginPath(); ctx.arc(cx + dx * (r + 1), cy + dy * (r + 1), 1.4, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = '#e6c34a'; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, 7); ctx.fill(); // alem
+}
+function galata(cx, cy) { // Galata Kulesi: yuvarlak gövde, konik külah
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.arc(cx + 4, cy + 5, 20, 0, 7); ctx.fill();
+  ctx.fillStyle = '#c9b48f'; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 7); ctx.fill();
+  ctx.fillStyle = '#5d6f7a'; ctx.beginPath(); ctx.arc(cx, cy, 15, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#4a5963'; ctx.lineWidth = 1;
+  for (let a = 0; a < 12; a++) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a * 0.5236) * 15, cy + Math.sin(a * 0.5236) * 15); ctx.stroke(); }
+  ctx.fillStyle = '#e6c34a'; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '700 8px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('GALATA', cx, cy + 27);
+}
+function drawWater() {
+  const yTop = BUS_CY - (BRIDGE[1] - G.dist) * PXKM, yBot = BUS_CY - (BRIDGE[0] - G.dist) * PXKM;
+  if (yBot < -20 || yTop > H + 20) return;
+  ctx.fillStyle = '#2d6e9c'; ctx.fillRect(0, yTop, W, yBot - yTop);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2;
+  for (let y = yTop + 20; y < yBot - 10; y += 34) for (let x = 6 + (y % 3) * 8; x < W; x += 46) {
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 4, x + 12, y); ctx.stroke();
+  }
+  // vapur
+  const vy = yTop + (yBot - yTop) * 0.55;
+  ctx.fillStyle = '#f3f1ec'; rr(8, vy - 30, 34, 62, 14); ctx.fill();
+  ctx.fillStyle = '#1d4e89'; ctx.fillRect(14, vy - 12, 22, 24);
+  ctx.fillStyle = '#20252b'; ctx.beginPath(); ctx.arc(25, vy, 5, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(22, vy + 34, 6, 20);
+  ctx.save(); ctx.translate(390, (yTop + yBot) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '14px Bungee, Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('İSTANBUL BOĞAZI', 0, 0); ctx.restore();
+}
+function drawBridge() {
+  const yTop = BUS_CY - (BRIDGE[1] - G.dist) * PXKM, yBot = BUS_CY - (BRIDGE[0] - G.dist) * PXKM;
+  if (yBot < -40 || yTop > H + 40) return;
+  // korkuluklar
+  ctx.fillStyle = '#c4c6cb'; ctx.fillRect(ROAD_L - 10, yTop, 6, yBot - yTop); ctx.fillRect(ROAD_R + 4, yTop, 6, yBot - yTop);
+  // kuleler ve taşıyıcı kablolar (asma köprü)
+  const towers = [yTop + 90, yBot - 90];
+  ctx.strokeStyle = '#e4e4e6'; ctx.lineWidth = 1.2;
+  for (const ty of towers) {
+    for (const side of [ROAD_L - 7, ROAD_R + 7]) {
+      for (let k = 1; k <= 7; k++) {
+        ctx.beginPath(); ctx.moveTo(side, ty); ctx.lineTo(side, ty - k * 26); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(side, ty); ctx.lineTo(side, ty + k * 26); ctx.stroke();
+      }
+    }
+  }
+  ctx.strokeStyle = '#d1d3d8'; ctx.lineWidth = 3;
+  for (const side of [ROAD_L - 7, ROAD_R + 7]) { ctx.beginPath(); ctx.moveTo(side, yTop); ctx.lineTo(side, yBot); ctx.stroke(); }
+  for (const ty of towers) {
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(ROAD_L - 14, ty - 6, ROAD_R - ROAD_L + 28, 16);
+    ctx.fillStyle = '#9ea3ab'; ctx.fillRect(ROAD_L - 18, ty - 10, 16, 20); ctx.fillRect(ROAD_R + 2, ty - 10, 16, 20);
+    ctx.fillStyle = '#b4b8bf'; ctx.fillRect(ROAD_L - 2, ty - 5, ROAD_R - ROAD_L + 4, 8);
+  }
+}
+function flag(x, y, w) { // Türk bayrağı
+  const h = w * 2 / 3;
+  ctx.fillStyle = '#e30a17'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + w * 0.37, y + h / 2, h * 0.25, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e30a17'; ctx.beginPath(); ctx.arc(x + w * 0.41, y + h / 2, h * 0.2, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath();
+  const sx = x + w * 0.56, sy = y + h / 2, R = h * 0.125;
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + Math.PI / 2 * 0.0, r = i % 2 ? R * 0.4 : R; ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); }
+  ctx.closePath(); ctx.fill();
 }
 function tree(x, y, r) {
   ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.arc(x + 4, y + 5, r, 0, 7); ctx.fill();
@@ -490,14 +637,14 @@ function drawStops() {
     ctx.strokeRect(266, top, 88, len); ctx.setLineDash([]);
     ctx.save(); ctx.translate(310, cy); ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = '#f2c230'; ctx.font = '22px Bungee, Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.terminal ? 'OTOGAR' : 'DURAK', 0, 0); ctx.restore();
+    ctx.fillText(s.final ? 'GÜMRÜK' : s.terminal ? 'OTOGAR' : 'DURAK', 0, 0); ctx.restore();
     // bekleme yeri
     const sx = 366;
     ctx.fillStyle = '#b7b2a6'; ctx.fillRect(sx, top + 10, 50, len - 20);
     ctx.fillStyle = s.terminal ? '#1d4e89' : '#2563a8'; rr(sx + 4, cy - 34, 42, 68, 5); ctx.fill();
     ctx.fillStyle = '#ffffff'; ctx.font = '700 11px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.terminal ? 'OTO' : 'D', sx + 25, cy - 20);
-    if (s.terminal) ctx.fillText('GAR', sx + 25, cy - 8);
+    ctx.fillText(s.final ? 'GÜM' : s.terminal ? 'OTO' : 'D', sx + 25, cy - 20);
+    if (s.terminal) ctx.fillText(s.final ? 'RÜK' : 'GAR', sx + 25, cy - 8);
     // yolcular
     const n = Math.min(s.waiting, 12);
     for (let p = 0; p < n; p++) {
@@ -530,10 +677,102 @@ function drawGantries() {
     ctx.fillStyle = '#1e7a3e'; rr(ROAD_L + 8, y, ROAD_R - ROAD_L - 16, 48, 5); ctx.fill();
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; rr(ROAD_L + 12, y + 4, ROAD_R - ROAD_L - 24, 40, 3); ctx.stroke();
     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '16px Bungee, Impact, sans-serif'; ctx.fillText(trUpper(ROUTE[i].n) + ' OTOGARI', W / 2 - 18, y + 18);
-    ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('600 m · sağ şeritten girin', W / 2 - 18, y + 35);
+    ctx.font = '15px Bungee, Impact, sans-serif'; ctx.fillText(trUpper(stopLabel(ROUTE[i])), W / 2 - 18, y + 18, ROAD_R - ROAD_L - 70);
+    ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('600 m · sağ şeritten girin · İstanbul ' + ROUTE[i].real.toLocaleString('tr-TR') + ' km', W / 2 - 18, y + 35, ROAD_R - ROAD_L - 70);
     ctx.font = '22px Rubik, sans-serif'; ctx.fillText('↗', ROAD_R - 34, y + 24);
   }
+  // İstanbul köprü tabelası
+  const by = BUS_CY - (BRIDGE[0] - 0.25 - G.dist) * PXKM;
+  if (by > -90 && by < H + 40) {
+    ctx.fillStyle = '#6d7076'; ctx.fillRect(ROAD_L - 6, by + 18, 6, 14); ctx.fillRect(ROAD_R, by + 18, 6, 14);
+    ctx.fillStyle = '#1d4e89'; rr(ROAD_L + 8, by, ROAD_R - ROAD_L - 16, 48, 5); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; rr(ROAD_L + 12, by + 4, ROAD_R - ROAD_L - 24, 40, 3); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '13px Bungee, Impact, sans-serif'; ctx.fillText('15 TEMMUZ ŞEHİTLER KÖPRÜSÜ', W / 2, by + 18, ROAD_R - ROAD_L - 40);
+    ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Avrupa → Asya · Anadolu\'ya hoş geldiniz', W / 2, by + 35);
+  }
+  // Gürbulak sınır kapısı: gümrük sundurması ve bayraklar
+  const fin = ROUTE[ROUTE.length - 1];
+  const gy = BUS_CY - (fin.km - G.dist) * PXKM;
+  if (gy > -260 && gy < H + 200) {
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(ROAD_L - 30, gy - 112, ROAD_R - ROAD_L + 60, 16);
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = '#c9ccd2'; ctx.fillRect(ROAD_L - 36, gy - 130, ROAD_R - ROAD_L + 72, 34);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#e30a17'; ctx.fillRect(ROAD_L - 36, gy - 130, ROAD_R - ROAD_L + 72, 5);
+    ctx.fillStyle = '#20252b'; ctx.font = '13px Bungee, Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('T.C. GÜRBULAK GÜMRÜK KAPISI', W / 2, gy - 111);
+    flag(6, gy - 60, 48); flag(366, gy - 210, 48);
+    ctx.fillStyle = '#555'; ctx.fillRect(4, gy - 60, 2, 50); ctx.fillRect(364, gy - 210, 2, 50);
+    // sınır çizgisi ve İran tabelası
+    const ly = gy - 260;
+    ctx.fillStyle = '#f3f1ec'; for (let x = ROAD_L; x < ROAD_R; x += 20) ctx.fillRect(x, ly, 12, 5);
+    ctx.fillStyle = '#20252b'; rr(W / 2 - 70, ly - 34, 140, 26, 4); ctx.fill();
+    ctx.fillStyle = '#f2c230'; ctx.font = '700 12px Rubik, sans-serif'; ctx.fillText('TÜRKİYE SINIRI · İRAN', W / 2, ly - 20.5);
+  }
+}
+
+// ---------- harita ----------
+const MAPB = { lon0: 25.6, lon1: 45.2, lat0: 35.5, lat1: 42.6, kx: Math.cos(39 * Math.PI / 180) };
+function drawMap(g, x, y, w, h, big) {
+  const mw = (MAPB.lon1 - MAPB.lon0) * MAPB.kx, mh = MAPB.lat1 - MAPB.lat0;
+  const s = Math.min(w / mw, h / mh);
+  const ox = x + (w - mw * s) / 2, oy = y + (h - mh * s) / 2;
+  const P = (lon, lat) => [ox + (lon - MAPB.lon0) * MAPB.kx * s, oy + (MAPB.lat1 - lat) * s];
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = '#1f4f73'; g.fillRect(x, y, w, h);
+  g.fillStyle = '#3c4048'; g.fillRect(x, y, w, h); // komşu ülkeler
+  // denizler (kabaca): Karadeniz, Ege, Akdeniz
+  g.fillStyle = '#1f4f73';
+  const sea = pts => { g.beginPath(); pts.forEach(([lo, la], i) => { const [px, py] = P(lo, la); i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.closePath(); g.fill(); };
+  sea([[27.9,43.2],[41.8,43.2],[41.8,41.5],[40,41],[36,41.3],[33,42],[29,41.2],[28,42]]);
+  sea([[22,35.4],[36.5,35.4],[36.1,36.6],[34,36.25],[30,36.1],[27.3,36.6],[26.2,38.3],[26,40],[26.1,40.75],[24,41],[22,41]]);
+  sea([[34.6,35.4],[36.0,35.4],[35.85,35.9],[34.6,35.9]]);
+  const poly = (pts, fill, stroke) => {
+    g.beginPath(); pts.forEach(([lo, la], i) => { const [px, py] = P(lo, la); i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.closePath();
+    g.fillStyle = fill; g.fill(); if (stroke) { g.strokeStyle = stroke; g.lineWidth = big ? 2 : 1; g.stroke(); }
+  };
+  poly(TR_THRACE, '#d9cfb4', '#e30a17'); poly(TR_ANATOLIA, '#d9cfb4', '#e30a17');
+  // Marmara ve göller
+  poly([[27.3,40.72],[28.9,40.98],[29.1,40.95],[29.4,40.78],[29.9,40.72],[29.4,40.45],[28.6,40.4],[27.9,40.35],[27.3,40.4],[26.7,40.35],[26.75,40.42]], '#1f4f73');
+  poly(TR_VAN, '#2d6e9c'); poly(TR_TUZ, '#e8e4dc');
+  // güzergah
+  g.strokeStyle = '#d7262e'; g.lineWidth = big ? 3 : 1.6; g.setLineDash(big ? [7, 5] : [3, 2]);
+  g.beginPath(); ROUTE.forEach((r, i) => { const [px, py] = P(r.lon, r.lat); i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke();
+  g.setLineDash([]);
+  if (G) { // gidilen kısım
+    g.strokeStyle = '#d7262e'; g.lineWidth = big ? 4 : 2.2; g.beginPath();
+    ROUTE.forEach((r, i) => { if (r.km <= G.dist) { const [px, py] = P(r.lon, r.lat); i ? g.lineTo(px, py) : g.moveTo(px, py); } });
+    const [bx, by] = P(...routePos(G.dist)); g.lineTo(bx, by); g.stroke();
+  }
+  for (const r of ROUTE) {
+    const [px, py] = P(r.lon, r.lat);
+    g.fillStyle = G && G.dist >= r.km ? '#d7262e' : '#20252b';
+    g.beginPath(); g.arc(px, py, big ? 4 : 1.8, 0, 7); g.fill();
+    if (big) {
+      g.fillStyle = '#20252b'; g.font = '600 13px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const up = ['İzmit', 'Bolu', 'Kırıkkale', 'Sivas', 'Erzurum', 'Gürbulak'].includes(r.n);
+      g.fillText(r.n, px, py + (up ? -12 : 13));
+    }
+  }
+  if (big) {
+    g.font = '600 11px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const [name, lo, la] of NEIGHBORS) { const [px, py] = P(lo, la); g.fillStyle = name.endsWith('DENİZ') ? '#9cc3e0' : '#9a9ea8'; g.fillText(name, px, py); }
+    g.fillStyle = '#7a6f58'; g.font = '700 22px Bungee, Impact, sans-serif'; const [tx, ty] = P(35.2, 38.6); g.fillText('TÜRKİYE', tx, ty);
+  }
+  if (G) { // otobüs
+    const [bx, by] = P(...routePos(G.dist));
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(bx, by, big ? 8 : 4, 0, 7); g.fill();
+    g.fillStyle = '#d7262e'; g.beginPath(); g.arc(bx, by, big ? 5 : 2.6, 0, 7); g.fill();
+  }
+  g.restore();
+}
+const MINI = { x: W - 118, y: 98, w: 108, h: 50 };
+function drawBigMap(id) {
+  const c = document.getElementById(id), g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  drawMap(g, 0, 0, c.width, c.height, true);
 }
 
 function drawCar(c) {
@@ -642,15 +881,20 @@ function drawHUD() {
   ctx.fillStyle = '#d7262e'; ctx.fillRect(12, 81, (W - 24) * p, 3);
   for (const c of ROUTE) { ctx.fillStyle = G.dist >= c.km ? '#d7262e' : '#5b606c'; ctx.fillRect(12 + (W - 24) * c.km / total - 1, 79, 3, 7); }
 
+  // mini harita (dokun: büyük harita)
+  ctx.fillStyle = 'rgba(16,18,22,.8)'; rr(MINI.x - 4, MINI.y - 4, MINI.w + 8, MINI.h + 22, 6); ctx.fill();
+  drawMap(ctx, MINI.x, MINI.y, MINI.w, MINI.h, false);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 10px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' / ' + ROUTE[ROUTE.length - 1].real.toLocaleString('tr-TR') + ' km · M harita', MINI.x + MINI.w / 2, MINI.y + MINI.h + 9);
   // durak ipucu
   if (s && !s.arrived) {
     const dy = (s.km - G.dist) * PXKM;
     if (dy < 650 && dy > -40) {
       let msg = G.x <= 280 ? 'Sağ şeride geç →' : G.speed > 2 ? (dy < 160 ? 'FRENE BAS — dur!' : 'Yavaşla, sarı cepte dur') : 'Biraz daha ilerle';
       if (Math.abs(dy) < 45 && G.x > 280 && G.speed >= 2) msg = 'Tam dur!';
-      ctx.fillStyle = 'rgba(242,194,48,.95)'; rr(W / 2 - 100, 100, 200, 26, 13); ctx.fill();
+      ctx.fillStyle = 'rgba(242,194,48,.95)'; rr(12, 100, 190, 26, 13); ctx.fill();
       ctx.fillStyle = '#15171c'; ctx.font = '700 13px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(msg, W / 2, 113.5);
+      ctx.fillText(msg, 107, 113.5);
     }
   }
   // bildirim
@@ -659,8 +903,8 @@ function drawHUD() {
     ctx.globalAlpha = clamp(a, 0, 1);
     ctx.font = '700 14px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tw = Math.min(W - 30, ctx.measureText(G.toast.text).width + 30);
-    ctx.fillStyle = 'rgba(16,18,22,.9)'; rr(W / 2 - tw / 2, 140, tw, 32, 16); ctx.fill();
-    ctx.fillStyle = G.toast.color; ctx.fillText(G.toast.text, W / 2, 156.5, W - 44);
+    ctx.fillStyle = 'rgba(16,18,22,.9)'; rr(W / 2 - tw / 2, 160, tw, 32, 16); ctx.fill();
+    ctx.fillStyle = G.toast.color; ctx.fillText(G.toast.text, W / 2, 176.5, W - 44);
     ctx.globalAlpha = 1;
   }
   for (const f of G.floats) {
@@ -704,6 +948,11 @@ function togglePause() {
   if (!running) return;
   paused = !paused;
   document.getElementById('pauseScreen').hidden = !paused;
+  if (paused) {
+    drawBigMap('mapBig');
+    const s = G.stops[G.si];
+    document.getElementById('pauseInfo').textContent = 'İstanbul\'dan ' + Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' km yol aldın' + (s ? ' · sıradaki otogar: ' + stopLabel(ROUTE.find(r => r.km >= s.km)) : '') + '. Mola yerinde çay içiliyor…';
+  }
   if (engGain && ac) engGain.gain.setTargetAtTime(paused ? 0 : 0.035, ac.currentTime, 0.05);
 }
 function endGame(win, reason) {
@@ -714,9 +963,9 @@ function endGame(win, reason) {
   const isBest = score > best;
   if (isBest) { best = score; try { localStorage.setItem('zafer-best', String(best)); } catch (e) {} }
   render();
-  document.getElementById('endTitle').textContent = win ? 'Erzurum\'a vardık!' : 'Sefer yarıda kaldı';
+  document.getElementById('endTitle').textContent = win ? 'Gürbulak Sınır Kapısı\'na vardık!' : 'Sefer yarıda kaldı';
   document.getElementById('endReason').textContent = win
-    ? (G.stars >= 4 ? 'Zafer Turizm yolcuları memnun. Muavin kolonya dağıtıyor.' : 'Vardık ama yolcular biraz söylendi.')
+    ? (G.stars >= 4 ? 'İstanbul\'dan Türkiye\'nin doğu sınırına, 1.625 km. Zafer Turizm yolcuları memnun, muavin kolonya dağıtıyor.' : 'Sınıra vardık ama yolcular biraz söylendi.')
     : reason;
   const rows = [
     ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
@@ -724,17 +973,23 @@ function endGame(win, reason) {
     ['Durak (uğranan / kaçan)', G.served + ' / ' + G.missed],
     ['Kaza', G.crashes],
     ['Firma puanı', '★'.repeat(G.stars) + '☆'.repeat(5 - G.stars)],
-    ['Yol', G.dist.toFixed(1).replace('.', ',') + ' / ' + ROUTE[ROUTE.length - 1].km + ' km'],
+    ['Yol', Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' / ' + ROUTE[ROUTE.length - 1].real.toLocaleString('tr-TR') + ' km'],
     ['En iyi kasa', money(best)]
   ];
   const dl = document.getElementById('endStats'); dl.innerHTML = '';
   for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); }
   document.getElementById('endScreen').hidden = false;
+  drawBigMap('mapEnd');
   if (win) { beep(523, 0.15, 'square', 0.05); beep(659, 0.15, 'square', 0.05, 0.15); beep(784, 0.3, 'square', 0.05, 0.3); }
 }
 document.getElementById('startBtn').addEventListener('click', start);
 document.getElementById('againBtn').addEventListener('click', start);
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
+cvs.addEventListener('pointerdown', e => {
+  if (!running || paused) return;
+  const r = cvs.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  if (x > MINI.x - 6 && x < MINI.x + MINI.w + 6 && y > MINI.y - 6 && y < MINI.y + MINI.h + 20) togglePause();
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden && running && !paused) togglePause(); });
 
 // ---------- açılış ekranı: yandan otobüs ----------
