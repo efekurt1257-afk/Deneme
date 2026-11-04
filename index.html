@@ -90,7 +90,7 @@ body {
       <canvas id="sideBus" width="680" height="260"></canvas>
       <dl class="howto">
         <dt>Sefer</dt><dd>İstanbul Boğazı'ndan geçip Gürbulak Sınır Kapısı'na: 1.625 km, 11 şehir.</dd>
-        <dt>Durak</dt><dd>Sağ şeride geç, sarı cebin hizasında tam dur. Yolcular biner, bilet parası kasaya.</dd>
+        <dt>Durak</dt><dd>Sağ şeride geç, sarı cebin hizasında tam dur. Yolcular biner.</dd>
         <dt>Şehir</dt><dd>İstanbul'da serbest gez: Sultanahmet, Galata, Boğaz. Duraklardan yolcu topla.</dd>
         <dt>Mancınık</dt><dd>Sınır kapısında yolcuları mancınıkla fırlat, havada paraşütü aç.</dd>
       </dl>
@@ -147,7 +147,7 @@ const ROAD_L = 60, ROAD_R = 360;
 const LANES = [110, 210, 310];
 const PXKM = 2000;          // 1 oyun km = 2000 piksel
 const PXS = 4.5;            // km/sa başına piksel/sn
-const MAXV = 130, CAP = 46, FARE = 250;
+const MAXV = 130, CAP = 46;
 const BUS = { w: 58, h: 150, y: H - 205 };
 const BUS_CY = BUS.y + BUS.h / 2;
 // km: oyun kilometresi · real: İstanbul'dan gerçek karayolu mesafesi · lon/lat: gerçek konum
@@ -188,7 +188,6 @@ const TR_TUZ = [[33.2,38.95],[33.45,38.95],[33.55,38.65],[33.35,38.55],[33.2,38.
 const NEIGHBORS = [['YUNANİSTAN',25.75,41.3],['BULGARİSTAN',27.0,42.15],['GÜRCİSTAN',43.0,41.75],['ERMENİSTAN',44.6,40.55],['İRAN',44.75,38.6],['IRAK',43.6,36.9],['SURİYE',38.6,36.3],['KARADENİZ',34.5,42.6],['AKDENİZ',32.5,35.6]];
 const CAR_COLORS = ['#e8e4da', '#2b6cb0', '#9b2c2c', '#1f1f24', '#8a8f99', '#c97b2a', '#2f855a', '#6b46c1'];
 const trUpper = s => s.toLocaleUpperCase('tr-TR');
-const money = n => '₺' + Math.round(n).toLocaleString('tr-TR');
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -277,7 +276,7 @@ document.getElementById('cHorn').addEventListener('pointerdown', e => { e.preven
 // ---------- oyun durumu ----------
 let G = null, running = false, paused = false, last = 0;
 let best = 0;
-try { best = +localStorage.getItem('zafer-best') || 0; } catch (e) {}
+try { best = +localStorage.getItem('zafer-best-yolcu') || 0; } catch (e) {}
 
 function buildStops() {
   const stops = [];
@@ -296,9 +295,9 @@ function buildStops() {
 
 function newGame(mode = 'route') {
   G = {
-    mode, launched: 0, r: null,
+    mode, launched: 0, hits: 0, r: null,
     dist: 0, speed: 0, x: LANES[2], camX: LX(LANES[2]) * 0.6, tilt: 0, roadOff: 0,
-    money: 0, pax: 12, carried: 0, stars: 5, damage: 0,
+    pax: 12, carried: 0, stars: 5, damage: 0,
     served: 0, missed: 0, crashes: 0, time: 0,
     cars: [], floats: [], spawnT: 1.2, inv: 0, shake: 0, hornCd: 0,
     stops: buildStops(), si: 0, boardT: 0,
@@ -414,8 +413,8 @@ function updateStops(dt) {
       G.boardT = 0.28;
       if (s.alight > 0) { s.alight--; G.pax--; float('İndi', G.x + 50, BUS_CY + 20, '#a9adb8'); beep(300, 0.05, 'triangle', 0.04); }
       else if (s.waiting > 0 && G.pax < CAP) {
-        s.waiting--; G.pax++; G.carried++; s.boarded++; G.money += FARE;
-        float('+' + money(FARE), G.x + 46, BUS_CY - 10, '#7be08f'); coinSound();
+        s.waiting--; G.pax++; G.carried++; s.boarded++;
+        float('+1 yolcu', G.x + 46, BUS_CY - 10, '#7be08f'); coinSound();
       } else finishStop(s);
     }
   } else if (s.arrived && !s.done && Math.abs(dy) >= 45 && s.waiting === 0 && s.alight === 0) {
@@ -438,8 +437,7 @@ function finishStop(s) {
   if (s.done) return;
   s.done = true; G.si++; G.served++;
   const bonus = s.terminal ? 400 : 100;
-  G.money += bonus;
-  toast((s.terminal ? 'Otogar' : 'Durak') + ' tamam! Dakiklik primi +' + money(bonus), 2, '#7be08f');
+  toast((s.terminal ? 'Otogar' : 'Durak') + ' tamam! Yolcular memnun.', 2, '#7be08f');
   if (s.final) setTimeout(() => { if (running && G.mode === 'route') startCatapult(); }, 1200);
 }
 
@@ -481,12 +479,11 @@ function updateRoute(dt) {
       if (bx < cx + cw && bx + bw > cx && by < cy + ch && by + bh > cy) {
         const dmg = c.truck ? 34 : 22;
         G.damage = Math.min(100, G.damage + dmg); G.crashes++;
-        G.money = Math.max(0, G.money - 500);
         G.speed *= 0.35; G.inv = 1.6; G.shake = 0.45;
         if (c.y < BUS.y) { c.boost = 1.5; c.speed = Math.max(c.speed, G.speed + 30); }
         else { c.speed = Math.max(0, G.speed - 20); }
         if (Math.abs(c.x - G.x) > 30) c.tx = c.x < G.x ? LANES[Math.max(0, LANES.indexOf(c.tx) - 1)] : LANES[Math.min(2, LANES.indexOf(c.tx) + 1)];
-        noise(); toast('Kaza! Hasar %' + Math.round(G.damage) + ' · masraf −₺500', 2.2, '#ff6b6b');
+        noise(); toast('Kaza! Hasar %' + Math.round(G.damage), 2.2, '#ff6b6b');
         if (G.damage >= 100) return endGame(false, 'Otobüs ağır hasar aldı ve servise çekildi.');
         break;
       }
@@ -890,9 +887,9 @@ function drawHUD() {
   ctx.fillStyle = '#f3f1ec'; ctx.font = '32px Bungee, Impact, sans-serif';
   ctx.fillText(String(Math.round(G.speed)).padStart(3, ' '), 12, 42);
   ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('km/sa', 14, 56);
-  // kasa & yolcu
-  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText(money(G.money), 102, 30);
-  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 50);
+  // yolcu
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 30);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Taşınan ' + G.carried, 102, 50);
   // yıldızlar
   ctx.textAlign = 'right'; ctx.font = '16px Rubik, sans-serif';
   let st = ''; for (let i = 0; i < 5; i++) st += i < G.stars ? '★' : '☆';
@@ -1370,7 +1367,6 @@ function render() {
 const CB = 420, CR = 180, CP = CB + CR, CN = 6, CEDGE = CN * CP;
 const RV = { F: 520, CAMH: 230, HZ: 210, ZN: 30, ZF: 4200, BACK: 330 };
 const PXM = 0.08; // 1 piksel ≈ 8 cm (otobüs 150 px ≈ 12 m)
-const FARE_CITY = 30;
 const cam = { x: 0, z: 0, c: 1, s: 0 };
 let CITY = null;
 
@@ -1588,7 +1584,7 @@ function updateRoam(dt) {
     }
     if (R.inv <= 0 && Math.hypot(x - R.x, z - R.z) < 72) {
       R.inv = 1.2; noise(0.3, 0.2);
-      if (Math.abs(R.speed) > 8) { G.money = Math.max(0, G.money - 100); G.crashes++; toast('Kaza! Sigorta masrafı −₺100', 1.8, '#ff6b6b'); }
+      if (Math.abs(R.speed) > 8) { G.crashes++; toast('Kaza! Dikkatli sür.', 1.8, '#ff6b6b'); }
       R.speed *= -0.3; c.v = 0;
     }
   }
@@ -1602,9 +1598,9 @@ function updateRoam(dt) {
       boarding = true;
       st.board -= dt;
       if (st.board <= 0) {
-        st.board = 0.32; st.waiting--; G.pax++; G.carried++; G.money += FARE_CITY;
-        float('+' + money(FARE_CITY), W / 2 + 50, 360, '#7be08f'); coinSound();
-        if (st.waiting === 0) { st.refill = 30; G.money += 50; G.served++; toast('Durak boşaldı! Dakiklik primi +₺50', 1.8, '#7be08f'); }
+        st.board = 0.32; st.waiting--; G.pax++; G.carried++;
+        float('+1 yolcu', W / 2 + 50, 360, '#7be08f'); coinSound();
+        if (st.waiting === 0) { st.refill = 30; G.served++; toast('Durak boşaldı! Herkes bindi.', 1.8, '#7be08f'); }
       }
     }
   }
@@ -1846,8 +1842,8 @@ function drawHUDRoam() {
   ctx.fillStyle = '#f3f1ec'; ctx.font = '32px Bungee, Impact, sans-serif';
   ctx.fillText(String(Math.round(Math.abs(R.speed))).padStart(3, ' '), 12, 42);
   ctx.fillStyle = R.speed < -0.5 ? '#f2c230' : '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText(R.speed < -0.5 ? 'GERİ' : 'km/sa', 14, 56);
-  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText(money(G.money), 102, 30);
-  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 50);
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 20px Rubik, sans-serif'; ctx.fillText('Yolcu ' + G.pax + '/' + CAP, 102, 30);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 13px Rubik, sans-serif'; ctx.fillText('Taşınan ' + G.carried, 102, 50);
   ctx.textAlign = 'right'; ctx.fillStyle = '#f2c230'; ctx.font = '15px Bungee, Impact, sans-serif'; ctx.fillText('İSTANBUL', W - 12, 28);
   ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Serbest sürüş · şehir hattı', W - 12, 46);
   ctx.textAlign = 'left'; ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif';
@@ -1894,17 +1890,17 @@ function tickFx(dt) {
 // =====================================================================
 const KS = 0.42, KGY = 652, KG = 520, KOX = 150;
 const KT = [
-  { name: 'Saman balyası', x0: 520, x1: 660, pts: 200, type: 'hay', top: 70 },
-  { name: 'Havuz', x0: 980, x1: 1170, pts: 500, type: 'pool', top: -14 },
-  { name: 'Trambolin', x0: 1460, x1: 1570, pts: 300, type: 'tramp', top: 46 },
-  { name: 'Hedef', x0: 2040, x1: 2170, pts: 1000, type: 'bull', top: 0 }
+  { name: 'Saman balyası', x0: 520, x1: 660, type: 'hay', top: 70 },
+  { name: 'Havuz', x0: 980, x1: 1170, type: 'pool', top: -14 },
+  { name: 'Trambolin', x0: 1460, x1: 1570, type: 'tramp', top: 46 },
+  { name: 'Bayraklı hedef', x0: 2040, x1: 2170, type: 'bull', top: 0 }
 ];
 const ARM_COCK = Math.PI + 0.25, ARM_REL = Math.PI / 2 - 0.2, PIV = [40, 72];
 let K = null, kHeld = false;
 function startCatapult() {
   const n = G.mode === 'roam' ? G.pax : Math.max(G.pax, 6);
   K = { from: G.mode, total: n, left: n, angle: 45, power: 0, pdir: 1, charging: false, proj: null, camX: 0,
-    wind: Math.round(rand(-45, 45)), earned: 0, landed: [], parts: [], arm: ARM_COCK, armT: 0, wait: 0, done: false, endT: 0 };
+    wind: Math.round(rand(-45, 45)), hits: 0, landed: [], parts: [], arm: ARM_COCK, armT: 0, wait: 0, done: false, endT: 0 };
   G.mode = 'catapult'; kHeld = false;
   setControls();
   if (engGain && ac) engGain.gain.setTargetAtTime(0, ac.currentTime, 0.2);
@@ -1922,8 +1918,8 @@ function kFire() {
 function kChute() {
   if (K && K.proj && K.proj.state === 'fly' && !K.proj.chute) { K.proj.chute = true; beep(880, 0.08, 'triangle', 0.05); beep(660, 0.12, 'triangle', 0.05, 0.08); }
 }
-function kAward(pts, text, color) {
-  K.earned += pts; G.money += pts;
+function kAward(hit, text, color) {
+  if (hit) { K.hits++; G.hits++; }
   const p = K.proj;
   float(text, KOX + (p.x - K.camX) * KS, KGY - p.y * KS - 40, color);
 }
@@ -1931,18 +1927,18 @@ function kLand(t) {
   const p = K.proj;
   if (t && t.type === 'tramp' && !p.bounced) {
     p.bounced = true; p.y = t.top; p.vy = Math.abs(p.vy) * 0.75 + 160; p.vx *= 0.9;
-    kAward(t.pts, 'Trambolin! +' + money(t.pts), '#7be08f'); beep(300, 0.2, 'sine', 0.08); beep(600, 0.25, 'sine', 0.06, 0.1);
+    kAward(true, 'Trambolin! Hoppaa!', '#7be08f'); beep(300, 0.2, 'sine', 0.08); beep(600, 0.25, 'sine', 0.06, 0.1);
     return;
   }
   p.state = 'landed'; p.y = t ? t.top : 0;
-  let pts = 0, text = '', color = '#7be08f';
-  if (t && t.type === 'hay') { pts = t.pts; text = 'Samana gömüldü! +' + money(pts); noise(0.25, 0.12); }
-  else if (t && t.type === 'pool') { pts = t.pts; text = 'Havuza şıpır! +' + money(pts); noise(0.5, 0.18); for (let i = 0; i < 26; i++) K.parts.push({ x: p.x, y: 0, vx: rand(-160, 160), vy: rand(150, 420), t: 1, color: '#9cd3f5' }); }
-  else if (t && t.type === 'bull') { pts = t.pts; text = 'TAM İSABET! +' + money(pts); color = '#f2c230'; beep(523, 0.12, 'square', 0.05); beep(784, 0.2, 'square', 0.05, 0.12); }
-  else if (p.chute) { pts = 50; text = 'Yumuşak iniş +' + money(50); }
+  let hit = false, text = '', color = '#7be08f';
+  if (t && t.type === 'hay') { hit = true; text = 'Samana gömüldü!'; noise(0.25, 0.12); }
+  else if (t && t.type === 'pool') { hit = true; text = 'Havuza şıpır!'; noise(0.5, 0.18); for (let i = 0; i < 26; i++) K.parts.push({ x: p.x, y: 0, vx: rand(-160, 160), vy: rand(150, 420), t: 1, color: '#9cd3f5' }); }
+  else if (t && t.type === 'bull') { hit = true; text = 'TAM İSABET!'; color = '#f2c230'; beep(523, 0.12, 'square', 0.05); beep(784, 0.2, 'square', 0.05, 0.12); }
+  else if (p.chute) { text = 'Yumuşak iniş'; }
   else { text = 'Ayy! Toz duman'; color = '#ffb070'; noise(0.3, 0.16); for (let i = 0; i < 14; i++) K.parts.push({ x: p.x, y: 0, vx: rand(-120, 120), vy: rand(60, 200), t: 0.8, color: '#c9b98a' }); }
-  if (p.chute && t && t.type !== 'tramp') { pts += 100; text += ' · paraşüt +₺100'; }
-  kAward(pts, text, color);
+  if (p.chute && t && t.type !== 'tramp') text += ' · paraşütle';
+  kAward(hit, text, color);
   K.landed.push({ x: p.x, y: p.y, color: p.color, type: t ? t.type : 'ground', dizzy: !t && !p.chute, t: 0 });
   K.wait = 1.5;
 }
@@ -1951,7 +1947,7 @@ function updateCat(dt) {
   const held = input.gas || kHeld;
   if (K.done) { K.endT -= dt; if (K.endT <= 0) finishCat(); }
   else if (!K.proj && K.wait <= 0) {
-    if (K.left <= 0) { K.done = true; K.endT = 2.6; G.pax = 0; toast('Bitti! Mancınık kazancı: ' + money(K.earned), 2.6, '#f2c230'); }
+    if (K.left <= 0) { K.done = true; K.endT = 2.6; G.pax = 0; toast('Bitti! ' + K.hits + ' isabet, ' + K.total + ' yolcu uçtu.', 2.6, '#f2c230'); }
     else {
       if (input.left) K.angle = Math.min(80, K.angle + 35 * dt);
       if (input.right) K.angle = Math.max(15, K.angle - 35 * dt);
@@ -2048,7 +2044,7 @@ function renderCat() {
       ctx.fillStyle = '#7d828b'; ctx.fillRect((x0 + x1) / 2 - 1, KGY - 70, 2, 66);
       flag((x0 + x1) / 2 + 1, KGY - 70, 30);
     }
-    ctx.fillStyle = '#20252b'; ctx.font = '700 10px Rubik, sans-serif'; ctx.fillText(t.name + ' ' + money(t.pts), (x0 + x1) / 2, KGY + 36);
+    ctx.fillStyle = '#20252b'; ctx.font = '700 10px Rubik, sans-serif'; ctx.fillText(t.name, (x0 + x1) / 2, KGY + 36);
   }
   // mancınık
   const px = sx(PIV[0]), py = sy(PIV[1]);
@@ -2097,8 +2093,8 @@ function drawHUDCat() {
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   ctx.fillStyle = '#f2c230'; ctx.font = '20px Bungee, Impact, sans-serif'; ctx.fillText('MANCINIK', 12, 30);
   ctx.fillStyle = '#a9adb8'; ctx.font = '500 11px Rubik, sans-serif'; ctx.fillText('Gürbulak Sınır Kapısı', 12, 46);
-  ctx.fillStyle = '#7be08f'; ctx.font = '700 18px Rubik, sans-serif'; ctx.textAlign = 'right'; ctx.fillText('+' + money(K.earned), W - 12, 28);
-  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif'; ctx.fillText('Kasa ' + money(G.money), W - 12, 46);
+  ctx.fillStyle = '#7be08f'; ctx.font = '700 18px Rubik, sans-serif'; ctx.textAlign = 'right'; ctx.fillText('İsabet ' + K.hits, W - 12, 28);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = '500 12px Rubik, sans-serif'; ctx.fillText('Uçan ' + (K.total - K.left) + ' / ' + K.total, W - 12, 46);
   ctx.textAlign = 'left'; ctx.fillText('Sıradaki: ' + K.left + ' / ' + K.total + ' yolcu', 12, 66);
   ctx.fillText('Açı ' + Math.round(K.angle) + '°', 170, 66);
   ctx.fillText('Rüzgâr ' + (K.wind >= 0 ? '→ ' : '← ') + Math.abs(K.wind), 252, 66);
@@ -2164,9 +2160,9 @@ function endGame(win, reason) {
   if (!running) return;
   running = false;
   if (engGain && ac) engGain.gain.setTargetAtTime(0, ac.currentTime, 0.1);
-  const score = G.money;
+  const score = G.carried;
   const isBest = score > best;
-  if (isBest) { best = score; try { localStorage.setItem('zafer-best', String(best)); } catch (e) {} }
+  if (isBest) { best = score; try { localStorage.setItem('zafer-best-yolcu', String(best)); } catch (e) {} }
   render();
   const roam = G.mode === 'roam' || (K && K.from === 'roam' && G.mode === 'catapult');
   document.getElementById('endTitle').textContent = roam ? 'Şehir turu bitti' : win ? 'Gürbulak Sınır Kapısı\'na vardık!' : 'Sefer yarıda kaldı';
@@ -2176,21 +2172,21 @@ function endGame(win, reason) {
     ? (G.stars >= 4 ? 'İstanbul\'dan Türkiye\'nin doğu sınırına, 1.625 km. Zafer Turizm yolcuları memnun, muavin kolonya dağıtıyor.' : 'Sınıra vardık ama yolcular biraz söylendi.')
     : reason;
   const rows = roam ? [
-    ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
-    ['Taşınan yolcu', G.carried],
+    ['Taşınan yolcu', G.carried + (isBest ? ' · rekor!' : '')],
     ['Boşaltılan durak', G.served],
     ['Mancınıkla uçan', G.launched],
+    ['Mancınık isabeti', G.hits],
     ['Kaza', G.crashes],
-    ['En iyi kasa', money(best)]
+    ['Rekor (yolcu)', best]
   ] : [
-    ['Kasa', money(score) + (isBest ? ' · rekor!' : '')],
-    ['Taşınan yolcu', G.carried],
+    ['Taşınan yolcu', G.carried + (isBest ? ' · rekor!' : '')],
     ['Mancınıkla uçan', G.launched],
+    ['Mancınık isabeti', G.hits],
     ['Durak (uğranan / kaçan)', G.served + ' / ' + G.missed],
     ['Kaza', G.crashes],
     ['Firma puanı', '★'.repeat(G.stars) + '☆'.repeat(5 - G.stars)],
     ['Yol', Math.round(realKm(G.dist)).toLocaleString('tr-TR') + ' / ' + ROUTE[ROUTE.length - 1].real.toLocaleString('tr-TR') + ' km'],
-    ['En iyi kasa', money(best)]
+    ['Rekor (yolcu)', best]
   ];
   const dl = document.getElementById('endStats'); dl.innerHTML = '';
   for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); }
@@ -2269,7 +2265,7 @@ function drawSideBus() {
 }
 
 function showBest() {
-  if (best > 0) document.getElementById('bestLine').textContent = 'En iyi kasa: ' + money(best) + ' · Klavye: ← → ↑ ↓ · Boşluk korna · P mola';
+  if (best > 0) document.getElementById('bestLine').textContent = 'Rekor: ' + best + ' yolcu · Klavye: ← → ↑ ↓ · Boşluk korna · M harita · C kamera';
 }
 showBest();
 resize();
