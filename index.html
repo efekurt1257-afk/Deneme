@@ -80,6 +80,15 @@ button { cursor: pointer; }
 .btn.danger.sure { background: var(--stamp); border-color: var(--stamp); color: var(--sheet); }
 .btn.small { padding: 5px 10px; font-size: .85rem; }
 
+/* Instagram bandı */
+.ig-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -4px 0 18px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet); }
+.ig-icon { width: 20px; height: 20px; color: var(--stamp); flex: none; }
+.ig-bar a { color: var(--accent); font-weight: 600; text-decoration: none; word-break: break-all; }
+.ig-bar a:hover { text-decoration: underline; }
+.ig-form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.ig-form input { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 10px; }
+.facts a { color: var(--accent); font-weight: 500; text-decoration: none; }
+
 /* Gövde */
 .grid { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 20px; align-items: start; }
 @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
@@ -202,6 +211,16 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     <button class="btn primary" id="add-btn" type="button">+ Kişi ekle</button>
   </header>
 
+  <div class="ig-bar" id="ig-bar">
+    <svg class="ig-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>
+    <span id="ig-view"></span>
+    <form id="ig-form" class="ig-form" hidden>
+      <input id="ig-input" placeholder="@hesabiniz ya da instagram.com/… linki" aria-label="Instagram hesabı" autocomplete="off">
+      <button class="btn small primary" type="submit">Kaydet</button>
+      <button class="btn small" type="button" id="ig-cancel">Vazgeç</button>
+    </form>
+  </div>
+
   <div class="grid">
     <aside class="shelf">
       <input class="search" id="search" type="search" placeholder="Ara: isim, görev yeri, unvan…" aria-label="Ara">
@@ -231,6 +250,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
           <label class="f full">Ad Soyad *<input id="f-name" required autocomplete="off"></label>
           <label class="f">Doğum yılı / tarihi<input id="f-born" placeholder="örn. 1968"></label>
           <label class="f">Memleket<input id="f-home" placeholder="örn. Sivas"></label>
+          <label class="f full">Instagram<input id="f-ig" placeholder="@kullaniciadi" autocomplete="off"></label>
           <label class="f full">Kısa tanım<textarea id="f-desc" placeholder="Kim olduğu, mesleği, öne çıkan özelliği…"></textarea></label>
         </div>
       </fieldset>
@@ -277,6 +297,17 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const initials = (n) => (n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toLocaleUpperCase("tr");
   const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  // "@ad", "ad", "instagram.com/ad/" ya da tam link → "ad"
+  const igHandle = (s) => {
+    let t = String(s || "").trim();
+    const m = t.match(/instagram\.com\/([^/?#\s]+)/i);
+    if (m) t = m[1];
+    t = t.replace(/^@+/, "").replace(/\/+$/, "");
+    return /^[A-Za-z0-9._]{1,30}$/.test(t) ? t : "";
+  };
+  const igLink = (h) => `<a href="https://www.instagram.com/${encodeURIComponent(h)}/" target="_blank" rel="noopener">@${esc(h)}</a>`;
+  const IG_KEY = "gorev-sicili-instagram";
+  let siteIg = "";
 
   const EXAMPLES = [
     {
@@ -337,8 +368,38 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     else { people = people.filter((x) => x.id !== id); lsWrite(); render(); }
   }
 
+  /* ---------- hesabın Instagram'ı ---------- */
+  function renderIg() {
+    $("ig-view").innerHTML = siteIg
+      ? `Instagram hesabımız: ${igLink(siteIg)} <button class="btn small" type="button" id="ig-edit">Değiştir</button>`
+      : `Hesabınızın Instagram adresi henüz eklenmedi. <button class="btn small" type="button" id="ig-edit">Instagram ekle</button>`;
+    $("ig-edit").onclick = () => {
+      $("ig-view").hidden = true; $("ig-form").hidden = false;
+      $("ig-input").value = siteIg ? "@" + siteIg : ""; $("ig-input").focus();
+    };
+  }
+  function closeIgForm() { $("ig-form").hidden = true; $("ig-view").hidden = false; }
+  $("ig-cancel").onclick = closeIgForm;
+  $("ig-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = $("ig-input").value.trim();
+    const h = igHandle(raw);
+    if (raw && !h) { $("ig-input").setCustomValidity("Geçerli bir Instagram kullanıcı adı yaz (harf, rakam, nokta, alt çizgi)."); $("ig-input").reportValidity(); return; }
+    $("ig-input").setCustomValidity("");
+    try {
+      if (mode === "db") await db.doc("settings/site").set({ instagram: h });
+      else { try { localStorage.setItem(IG_KEY, h); } catch (err) {} }
+      siteIg = h; closeIgForm(); renderIg();
+    } catch (err) {
+      $("ig-input").setCustomValidity("Kaydedilemedi, tekrar dene."); $("ig-input").reportValidity();
+    }
+  });
+  $("ig-input").addEventListener("input", () => $("ig-input").setCustomValidity(""));
+
   function startLocal(note) {
     mode = "local";
+    try { siteIg = localStorage.getItem(IG_KEY) || ""; } catch (e) { siteIg = ""; }
+    renderIg();
     const saved = lsRead();
     people = saved || EXAMPLES.map((p) => ({ ...p }));
     if (!saved) lsWrite();
@@ -352,6 +413,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     try { ns = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { ns = null; }
     if (!ns) { startLocal(); return; }
     db = ns; mode = "db";
+    db.doc("settings/site").onSnapshot((d) => { siteIg = (d.exists && d.data().instagram) || ""; renderIg(); }, () => {});
     const timer = setTimeout(() => { $("notice").textContent = "Kayıtlara henüz ulaşılamadı, bağlantı bekleniyor…"; }, 10000);
     db.collection("people").onSnapshot((snap) => {
       people = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -406,7 +468,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
       return;
     }
     const duties = p.duties || [];
-    const facts = [p.born && `<span>Doğum <b>${esc(p.born)}</b></span>`, p.home && `<span>Memleket <b>${esc(p.home)}</b></span>`, duties.length && `<span><b>${duties.length}</b> görev yeri</span>`].filter(Boolean).join("");
+    const facts = [p.born && `<span>Doğum <b>${esc(p.born)}</b></span>`, p.home && `<span>Memleket <b>${esc(p.home)}</b></span>`, igHandle(p.instagram) && `<span>Instagram ${igLink(igHandle(p.instagram))}</span>`, duties.length && `<span><b>${duties.length}</b> görev yeri</span>`].filter(Boolean).join("");
     el.innerHTML = `
       <div class="file-head">
         ${avatarHtml(p, true)}
@@ -475,6 +537,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     $("f-born").value = p?.born || "";
     $("f-home").value = p?.home || "";
     $("f-desc").value = p?.desc || "";
+    $("f-ig").value = p?.instagram ? "@" + p.instagram : "";
     $("f-status").value = p?.status || "gorevde";
     $("f-now").value = p?.now || "";
     $("f-story").value = p?.story || "";
@@ -508,12 +571,14 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     e.preventDefault();
     const name = $("f-name").value.trim();
     if (!name) { $("f-err").textContent = "Ad Soyad boş olamaz."; $("f-err").hidden = false; $("f-name").focus(); return; }
+    const igRaw = $("f-ig").value.trim();
+    if (igRaw && !igHandle(igRaw)) { $("f-err").textContent = "Instagram kullanıcı adı geçersiz (harf, rakam, nokta, alt çizgi olabilir)."; $("f-err").hidden = false; $("f-ig").focus(); return; }
     const duties = [...$("f-duties").querySelectorAll(".duty-row")].map((row) => {
       const d = {}; row.querySelectorAll("[data-k]").forEach((i) => { d[i.dataset.k] = i.value.trim(); }); return d;
     }).filter((d) => d.place || d.role || d.note);
     const p = {
       id: editing ? editing.id : newId(), name,
-      born: $("f-born").value.trim(), home: $("f-home").value.trim(), desc: $("f-desc").value.trim(),
+      born: $("f-born").value.trim(), home: $("f-home").value.trim(), desc: $("f-desc").value.trim(), instagram: igHandle(igRaw),
       photo: photoData, duties, status: $("f-status").value, now: $("f-now").value.trim(), story: $("f-story").value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -538,6 +603,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
   });
 
   render();
+  renderIg();
   if (window.claude && window.claude.use) startDb(); else startLocal();
 })();
 </script>
