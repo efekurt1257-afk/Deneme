@@ -27,6 +27,21 @@
         }
       ],
       "updatedAt": "2026-11-05T10:09:27.015Z"
+    },
+    {
+      "id": "gmw3elinb5vq6m",
+      "type": "gundem",
+      "title": "Genel Başkanımız Prof. Dr. Ümit Özdağ",
+      "date": "2026-11-05",
+      "text": "Genel Başkanımız Prof. Dr. Ümit Özdağ, 5 Kasım Perşembe günü saat 20.00'de KRT'de Türkiye gündemini değerlendirecek.\n5 Kasım \nPerşembe 20.00\nKRT TV",
+      "photos": [
+        {
+          "data": "photos/haber-mw3elf6i-0.jpg",
+          "thumb": "photos/haber-mw3elf6i-0-k.jpg"
+        }
+      ],
+      "createdAt": "2026-11-05T10:29:21.958Z",
+      "updatedAt": "2026-11-05T10:29:21.958Z"
     }
   ]
 }
