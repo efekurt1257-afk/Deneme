@@ -267,6 +267,11 @@ button.member:hover { box-shadow: var(--shadow); transform: translateY(-1px); bo
 .menu-btn svg { width: 20px; height: 20px; }
 .menu { position: fixed; z-index: 35; width: min(290px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.4); padding: 8px; display: grid; gap: 4px; }
 .menu-sec { display: grid; gap: 2px; }
+.menu-ig { display: flex; align-items: center; gap: 10px; background: var(--brand-strong); color: #fff; border-radius: 12px; padding: 10px 12px; text-decoration: none; margin-bottom: 4px; }
+.menu-ig svg { width: 22px; height: 22px; flex: none; }
+.menu-ig span { flex: 1; min-width: 0; display: grid; line-height: 1.25; font-weight: 700; overflow-wrap: anywhere; }
+.menu-ig small { font-family: var(--f-mono); font-size: .6rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 500; opacity: .85; }
+.menu-ig b { background: #fff; color: var(--brand-strong); border-radius: 999px; padding: 5px 11px; font-size: .78rem; flex: none; }
 .menu-sec + .menu-sec { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; }
 .menu-note { font-family: var(--f-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 12px 2px; }
 .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: none; background: none; padding: 10px 12px; border-radius: 10px; font-weight: 500; font-size: .95rem; color: var(--ink); text-decoration: none; }
@@ -1005,7 +1010,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     document.querySelectorAll(".bn").forEach((b) => { if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
     const todayN = items.filter((a) => !isPost(typeOf(a)) && daysUntil(a.date) === 0);
     $("bc-an").textContent = todayN.filter((a) => typeOf(a) === "duyuru").length || "";
-    $("overview").hidden = route.page !== "tab";
+    $("overview").hidden = !(route.page === "tab" && tab === "instagram");
     $("fab").hidden = route.page !== "tab";
 
     if (route.page === "edit") {
@@ -1170,11 +1175,11 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   }
   function igPage() {
     const list = igAccounts();
-    let rows = siteIg ? igRow("Ana hesabımız", siteIg, "", true) : "";
+    let rows = "";
     rows += list.map((a) => igRow(a.title, a.handle, `<button class="btn small admin-only" type="button" data-ig-edit="${esc(a.id)}">Düzenle</button>`)).join("");
-    return `<div class="page-head"><div><h1>Instagram</h1><span class="muted">${(list.length + (siteIg ? 1 : 0)) || ""} hesap</span></div>
+    return `<div class="page-head"><div><h1>Instagram</h1><span class="muted">${(list.length + (siteIg ? 1 : 0)) ? (list.length + (siteIg ? 1 : 0)) + " hesap" : ""}</span></div>
       <button class="btn primary admin-only" type="button" data-ig-add="1">${IGI}Hesap ekle</button></div>` +
-      (rows ? `<div class="iglist">${rows}</div>` : `<section class="panel">${emptyBox("Henüz Instagram hesabı eklenmedi.")}</section>`);
+      (rows ? `<div class="iglist">${rows}</div>` : (siteIg ? "" : `<section class="panel">${emptyBox("Henüz Instagram hesabı eklenmedi.")}</section>`));
   }
   let igEditing = null;
   function openIg(a) {
@@ -1310,7 +1315,8 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   function buildMenu() {
     const admin = document.body.classList.contains("is-admin");
     const cur = (t) => tab === t && route.page === "tab" ? ' aria-current="page"' : "";
-    let h = `<div class="menu-sec">
+    let h = siteIg ? `<a class="menu-ig" role="menuitem" href="https://www.instagram.com/${encodeURIComponent(siteIg)}/" target="_blank" rel="noopener">${MI.ig}<span><small>Instagram hesabımız</small>@${esc(siteIg)}</span><b>Takip et</b></a>` : "";
+    h += `<div class="menu-sec">
       <button class="menu-item" type="button" role="menuitem" data-go="gundem"${cur("gundem")}>${I.home}Gündem</button>
       <button class="menu-item" type="button" role="menuitem" data-go="duyurular"${cur("duyurular")}>${I.duyuru}Duyurular</button>
       <button class="menu-item" type="button" role="menuitem" data-go="haberler"${cur("haberler")}>${I.haber}Haberler</button>
