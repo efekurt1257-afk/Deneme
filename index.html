@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Zafer Partisi</title>
-<meta name="description" content="Zafer Partisi etkinlikleri, duyuruları ve haberleri">
+<title>Zafer Partisi Pendik</title>
+<meta name="description" content="Zafer Partisi Pendik duyuruları, gündemi ve haberleri">
 <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Zafer Partisi">
+<meta name="apple-mobile-web-app-title" content="ZP Pendik">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -442,7 +442,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
   <div class="inner">
     <div class="logo">
       <img class="logo-img" src="logo.png" alt="Zafer Partisi logosu" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="logo-mark" aria-hidden="true" hidden>ZP</div>
-      <div class="logo-name">Zafer Partisi<small>Etkinlikler, duyurular ve haberler</small></div>
+      <div class="logo-name">Zafer Partisi Pendik<small>Etkinlikler, duyurular ve haberler</small></div>
     </div>
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -1226,7 +1226,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
     fs.collection("settings").doc("site").onSnapshot((d) => { siteIg = (d.exists && d.data().instagram) || ""; renderIg(); }, () => {});
     fs.collection("items").onSnapshot((snap) => {
       items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      loaded = true; $("notice").textContent = "Zafer Partisi · Gündem";
+      loaded = true; $("notice").textContent = "Zafer Partisi Pendik · Gündem";
       render();
     }, () => { $("notice").textContent = "Kayıtlar okunamadı; internet bağlantını kontrol et."; });
   }
@@ -1480,7 +1480,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
       const r = await fetch("data.json?v=" + Date.now(), { cache: "no-store" });
       const d = await r.json();
       items = Array.isArray(d.items) ? d.items : []; siteIg = d.instagram || "";
-      $("notice").textContent = "Zafer Partisi · Gündem";
+      $("notice").textContent = "Zafer Partisi Pendik · Gündem";
     } catch (e) { items = []; $("notice").textContent = "Kayıtlar yüklenemedi; internet bağlantını kontrol et."; }
     loaded = true; renderIg(); render();
     if (ghToken) { try { await enterGh(); } catch (e) { if (e.status === 401) { try { localStorage.removeItem("gp-gh-token"); } catch (er) {} ghToken = ""; } } }

@@ -234,7 +234,7 @@ rep('  if (window.claude && window.claude.use) startDb(); else startLocal();',
       const r = await fetch("data.json?v=" + Date.now(), { cache: "no-store" });
       const d = await r.json();
       items = Array.isArray(d.items) ? d.items : []; siteIg = d.instagram || "";
-      $("notice").textContent = "Zafer Partisi · Gündem";
+      $("notice").textContent = "Zafer Partisi Pendik · Gündem";
     } catch (e) { items = []; $("notice").textContent = "Kayıtlar yüklenemedi; internet bağlantını kontrol et."; }
     loaded = true; renderIg(); render();
     if (ghToken) { try { await enterGh(); } catch (e) { if (e.status === 401) { try { localStorage.removeItem("gp-gh-token"); } catch (er) {} ghToken = ""; } } }
@@ -262,8 +262,8 @@ rep('<title>Gündem Panosu</title>\n<meta name="claude:viewport-fit-sides" conte
 # --- marka: Zafer Partisi
 rep('<div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>',
     '<img class="logo-img" src="logo.png" alt="Zafer Partisi logosu" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="logo-mark" aria-hidden="true" hidden>ZP</div>')
-rep('<div class="logo-name">Gündem Panosu<small>', '<div class="logo-name">Zafer Partisi<small>')
-rep('$("notice").textContent = "Gündem Panosu";', '$("notice").textContent = "Zafer Partisi · Gündem";')
+rep('<div class="logo-name">Gündem Panosu<small>', '<div class="logo-name">Zafer Partisi Pendik<small>')
+rep('$("notice").textContent = "Gündem Panosu";', '$("notice").textContent = "Zafer Partisi Pendik · Gündem";')
 rep('.logo-mark svg { width: 17px; height: 17px; }', '.logo-mark svg { width: 17px; height: 17px; }\n.logo-mark { font-weight: 700; font-size: .8rem; letter-spacing: -.02em; }\n.logo-img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; flex: none; background: #fff; border: 1px solid var(--line); }')
 
 
@@ -318,8 +318,8 @@ head = '''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Zafer Partisi</title>
-<meta name="description" content="Zafer Partisi etkinlikleri, duyuruları ve haberleri">
+<title>Zafer Partisi Pendik</title>
+<meta name="description" content="Zafer Partisi Pendik duyuruları, gündemi ve haberleri">
 <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -327,7 +327,7 @@ head = '''<!doctype html>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Zafer Partisi">
+<meta name="apple-mobile-web-app-title" content="ZP Pendik">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

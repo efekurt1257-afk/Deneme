@@ -1,7 +1,7 @@
 {
-  "name": "Zafer Partisi",
-  "short_name": "Zafer Partisi",
-  "description": "Zafer Partisi etkinlikleri, duyuruları ve haberleri",
+  "name": "Zafer Partisi Pendik",
+  "short_name": "ZP Pendik",
+  "description": "Zafer Partisi Pendik duyuruları, gündemi ve haberleri",
   "lang": "tr",
   "start_url": "./",
   "scope": "./",
