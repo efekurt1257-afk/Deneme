@@ -1,0 +1,13 @@
+{
+  "instagram": "zaferpartisi",
+  "items": [
+    {
+      "id": "isil-oyku-dinc",
+      "type": "haber",
+      "title": "IŞIL ÖYKÜ DİNÇ",
+      "date": "2026-11-27",
+      "text": "27 KASIM CUMA GÜNÜ\n10:30\nKARTAL ANADOLU ADLİYESİ\n56. ASLİYE CEZA MAHKEMESİ",
+      "photos": [{ "data": "photos/isil-oyku-dinc.jpg", "thumb": "photos/isil-oyku-dinc-k.jpg" }]
+    }
+  ]
+}
