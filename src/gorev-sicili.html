@@ -2,259 +2,310 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: personel dosyası — solda kişi rafı, sağda açık dosya; telefonda tek sütun */
+/* Layout: yapışkan üst bar → özet şeridi → solda kişi kartları, sağda kapaklı profil; telefonda tek sütun + yüzen buton */
 :root {
-  --paper: #eef1f3;
-  --sheet: #ffffff;
-  --ink: #17222c;
-  --muted: #5d6b77;
-  --line: #d6dde3;
-  --accent: #1d5a7a;      /* dosya mavisi */
-  --accent-soft: #dceaf2;
-  --stamp: #a2352b;       /* mühür kırmızısı */
-  --ok: #2f6b3f;  --ok-bg: #e2f0e5;
-  --warn: #8a5a12; --warn-bg: #f6ead3;
-  --grey-bg: #e7eaed;
-  --shadow: 0 1px 2px rgba(23,34,44,.06), 0 6px 20px rgba(23,34,44,.06);
-  --f-display: "Zilla Slab", "Rockwell", Georgia, serif;
-  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bg: #f2f4f1;
+  --surface: #ffffff;
+  --surface-2: #f7f8f6;
+  --ink: #121a17;
+  --muted: #5f6b66;
+  --line: #e1e6e2;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-soft: #d9f0ec;
+  --amber: #b45309; --amber-soft: #fdf0dc;
+  --ok: #15803d; --ok-soft: #dcf3e3;
+  --blue: #1d4ed8; --blue-soft: #e0e8fd;
+  --grey: #4b5563; --grey-soft: #eceeed;
+  --danger: #c2410c;
+  --shadow-sm: 0 1px 2px rgba(18,26,23,.05);
+  --shadow: 0 1px 2px rgba(18,26,23,.04), 0 12px 32px -12px rgba(18,26,23,.14);
+  --glass: rgba(242,244,241,.78);
+  --r: 18px;
+  --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f161c; --sheet: #172129; --ink: #e5ecf1; --muted: #93a3b0; --line: #2a3843;
-    --accent: #7db8d8; --accent-soft: #1d3442; --stamp: #e47a6d;
-    --ok: #8fd19f; --ok-bg: #1d3424; --warn: #e7bb6c; --warn-bg: #3a2e17; --grey-bg: #24303a;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    --bg: #0b100e; --surface: #141b18; --surface-2: #19211e; --ink: #e8efec; --muted: #94a39d; --line: #26302c;
+    --accent: #2dd4bf; --accent-ink: #062320; --accent-soft: #123a35;
+    --amber: #fbbf24; --amber-soft: #3a2a0e; --ok: #4ade80; --ok-soft: #12301d;
+    --blue: #93b4ff; --blue-soft: #1a2647; --grey: #b6c0bc; --grey-soft: #222b28; --danger: #fb923c;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 36px -14px rgba(0,0,0,.6);
+    --glass: rgba(11,16,14,.75);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f161c; --sheet: #172129; --ink: #e5ecf1; --muted: #93a3b0; --line: #2a3843;
-  --accent: #7db8d8; --accent-soft: #1d3442; --stamp: #e47a6d;
-  --ok: #8fd19f; --ok-bg: #1d3424; --warn: #e7bb6c; --warn-bg: #3a2e17; --grey-bg: #24303a;
-  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  --bg: #0b100e; --surface: #141b18; --surface-2: #19211e; --ink: #e8efec; --muted: #94a39d; --line: #26302c;
+  --accent: #2dd4bf; --accent-ink: #062320; --accent-soft: #123a35;
+  --amber: #fbbf24; --amber-soft: #3a2a0e; --ok: #4ade80; --ok-soft: #12301d;
+  --blue: #93b4ff; --blue-soft: #1a2647; --grey: #b6c0bc; --grey-soft: #222b28; --danger: #fb923c;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 36px -14px rgba(0,0,0,.6);
+  --glass: rgba(11,16,14,.75);
   color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
-body {
-  background: var(--paper); color: var(--ink);
-  font-family: var(--f-body); font-size: 15px; line-height: 1.5;
-}
-.wrap {
-  max-width: 1180px; margin: 0 auto;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 48px;
-}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--glass); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.inner { max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
-/* Üst bant */
-.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 18px; }
-.brand h1 { font-family: var(--f-display); font-weight: 700; font-size: 2rem; line-height: 1.05; margin: 0; letter-spacing: -.01em; }
-.brand p { margin: 4px 0 0; color: var(--muted); }
-.stats { display: flex; gap: 18px; font-family: var(--f-mono); font-size: .8rem; color: var(--muted); }
-.stats b { display: block; font-family: var(--f-display); font-size: 1.35rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Üst bar */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--glass); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
+.topbar .inner { display: flex; align-items: center; gap: 14px; padding-block: 12px; }
+.logo { display: flex; align-items: center; gap: 10px; flex: none; }
+.logo-mark { width: 36px; height: 36px; border-radius: 11px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 1rem; letter-spacing: -.02em; }
+.logo-name { font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; line-height: 1; }
+.logo-name small { display: block; font-family: var(--f-body); font-weight: 500; font-size: .72rem; color: var(--muted); letter-spacing: 0; margin-top: 3px; }
+.search-wrap { flex: 1 1 auto; max-width: 440px; margin-left: auto; position: relative; min-width: 0; }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; translate: 0 -50%; width: 17px; height: 17px; color: var(--muted); pointer-events: none; }
+.search { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 12px 9px 36px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.search:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+@media (max-width: 680px) { .logo-name small { display: none; } .add-top { display: none !important; } }
 
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); background: var(--sheet); border-radius: 8px;
-  padding: 8px 14px; font-weight: 500;
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 16px; font-weight: 600; font-size: .92rem; transition: transform .12s, background .15s, border-color .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn.primary:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.danger { color: var(--danger); }
+.btn.danger.sure { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.small { padding: 6px 12px; font-size: .84rem; border-radius: 10px; }
+.btn svg { width: 16px; height: 16px; }
+
+/* Özet şeridi */
+.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding-block: 22px 14px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-family: var(--f-display); font-weight: 800; font-size: 1.9rem; line-height: 1.1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .8rem; color: var(--muted); font-weight: 500; }
+.ig-card { grid-column: span 2; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; overflow: hidden; }
+@media (max-width: 640px) {
+  .overview { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .stat { padding: 12px; border-radius: 14px; }
+  .stat b { font-size: 1.5rem; }
+  .stat span { font-size: .72rem; }
+  .ig-card { grid-column: 1 / -1; }
 }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
-.btn.primary:hover { filter: brightness(1.08); }
-.btn.danger { color: var(--stamp); }
-.btn.danger.sure { background: var(--stamp); border-color: var(--stamp); color: var(--sheet); }
-.btn.small { padding: 5px 10px; font-size: .85rem; }
+.ig-badge { width: 42px; height: 42px; border-radius: 13px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #f59e0b, #e1306c 55%, #7c3aed); }
+.ig-badge svg { width: 22px; height: 22px; }
+.ig-text { flex: 1 1 160px; min-width: 0; display: grid; gap: 1px; }
+.ig-text .lbl { font-size: .78rem; color: var(--muted); font-weight: 500; }
+.ig-text a { font-family: var(--f-display); font-weight: 700; font-size: 1.15rem; color: var(--ink); text-decoration: none; word-break: break-all; }
+.ig-text a:hover { color: var(--accent); }
+.ig-text .empty-ig { font-weight: 600; }
+.ig-form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; min-width: 0; }
+.ig-form input { flex: 1 1 180px; min-width: 0; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 7px 11px; }
 
-/* Instagram bandı */
-.ig-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -4px 0 18px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet); }
-.ig-icon { width: 20px; height: 20px; color: var(--stamp); flex: none; }
-.ig-bar a { color: var(--accent); font-weight: 600; text-decoration: none; word-break: break-all; }
-.ig-bar a:hover { text-decoration: underline; }
-.ig-form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 260px; min-width: 0; }
-.ig-form input { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 10px; }
-.facts a { color: var(--accent); font-weight: 500; text-decoration: none; }
+/* Ana düzen */
+.grid { display: grid; grid-template-columns: minmax(270px, 350px) 1fr; gap: 22px; align-items: start; padding-bottom: 96px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+.shelf { display: flex; flex-direction: column; gap: 12px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); }
+@media (max-width: 860px) { .shelf { position: static; } }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: .8rem; font-weight: 600; color: var(--muted); transition: all .15s; }
+.chip:hover { color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.chip i { font-style: normal; opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
 
-/* Gövde */
-.grid { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 20px; align-items: start; }
-@media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
-
-.shelf { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.search { width: 100%; border: 1px solid var(--line); background: var(--sheet); border-radius: 8px; padding: 10px 12px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 10px; font-size: .8rem; color: var(--muted); }
-.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-
-.list { display: flex; flex-direction: column; gap: 6px; }
-.row {
-  display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center;
-  text-align: left; width: 100%; padding: 10px; border-radius: 10px;
-  border: 1px solid transparent; background: transparent;
-}
-.row:hover { background: var(--sheet); }
-.row[aria-current="true"] { background: var(--sheet); border-color: var(--line); box-shadow: var(--shadow); }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row { position: relative; display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center; text-align: left; width: 100%; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); transition: transform .15s, box-shadow .15s, border-color .15s; }
+.row:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.row[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .row .who { min-width: 0; }
-.row .name { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .name { font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .sub { font-size: .82rem; color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--grey); }
+.dot.s-gorevde { background: var(--ok); } .dot.s-terfi { background: var(--blue); } .dot.s-emekli { background: var(--amber); }
 
-.avatar {
-  width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
-  display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
-  font-family: var(--f-display); font-weight: 700; font-size: 1rem; overflow: hidden;
-}
-.avatar.big { width: 88px; height: 88px; font-size: 2rem; border-radius: 14px; }
+.avatar { width: 46px; height: 46px; border-radius: 14px; object-fit: cover; display: grid; place-items: center; color: #fff; font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; overflow: hidden; background: var(--hue-grad, var(--accent)); }
+.avatar.big { width: 104px; height: 104px; border-radius: 28px; font-size: 2.4rem; border: 5px solid var(--surface); box-shadow: var(--shadow); }
 
-/* Dosya */
-.file { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; overflow: hidden; }
-.file-head { display: flex; flex-wrap: wrap; gap: 18px; padding: 22px 22px 18px; border-bottom: 1px dashed var(--line); position: relative; }
-.file-head .meta { flex: 1 1 240px; min-width: 0; }
-.eyebrow { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.file-head h2 { font-family: var(--f-display); font-size: 1.9rem; line-height: 1.1; margin: 2px 0 6px; text-wrap: balance; }
-.file-head .desc { margin: 0; max-width: 62ch; }
-.facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; font-size: .85rem; color: var(--muted); }
-.facts span b { color: var(--ink); font-weight: 500; }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; align-self: flex-start; }
+/* Profil */
+.profile { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); min-width: 0; overflow: hidden; }
+.cover { height: 132px; background: var(--hue-grad, var(--accent)); position: relative; }
+.cover::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.22) 1.2px, transparent 1.3px); background-size: 16px 16px; mask-image: linear-gradient(90deg, transparent, #000 70%); -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); }
+.cover .tag-sample { position: absolute; left: 16px; top: 14px; z-index: 1; font-family: var(--f-mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; background: rgba(0,0,0,.28); color: #fff; padding: 3px 9px; border-radius: 999px; backdrop-filter: blur(6px); }
+.p-head { padding: 0 24px 6px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; margin-top: -52px; position: relative; }
+.p-head .actions { margin-left: auto; display: flex; gap: 8px; padding-bottom: 6px; }
+.p-id { padding: 10px 24px 4px; }
+.p-id h2 { font-family: var(--f-display); font-weight: 800; font-size: clamp(1.7rem, 4vw, 2.3rem); letter-spacing: -.03em; line-height: 1.05; margin: 0; text-wrap: balance; }
+.p-id .now { font-size: 1.02rem; color: var(--muted); font-weight: 500; margin-top: 4px; }
+.meta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.mchip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; font-size: .82rem; font-weight: 500; }
+.mchip svg { width: 14px; height: 14px; color: var(--muted); }
+.mchip a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.mchip a:hover { text-decoration: underline; }
+.about { padding: 14px 24px 0; max-width: 68ch; margin: 0; }
 
-.section { padding: 18px 22px; }
-.section h3 { font-family: var(--f-display); font-size: 1.15rem; margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px; }
-.section h3 small { font-family: var(--f-mono); font-weight: 400; font-size: .75rem; color: var(--muted); }
+.block { padding: 22px 24px; }
+.block-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.block-title h3 { font-family: var(--f-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -.02em; margin: 0; }
+.block-title small { font-family: var(--f-mono); font-size: .74rem; color: var(--muted); }
 
-/* Görev zaman çizelgesi */
-.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
-.timeline::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
-.timeline li { position: relative; padding: 0 0 18px 30px; }
-.timeline li:last-child { padding-bottom: 0; }
-.timeline li::before {
-  content: ""; position: absolute; left: 0; top: 5px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--sheet); border: 3px solid var(--accent);
-}
-.timeline li.current::before { background: var(--accent); }
-.when { font-family: var(--f-mono); font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.duty { font-weight: 600; font-size: 1.02rem; }
-.place { color: var(--accent); font-weight: 500; }
-.note { margin: 4px 0 0; color: var(--ink); opacity: .9; max-width: 62ch; }
+/* Görev yolculuğu */
+.journey { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; position: relative; }
+.journey::before { content: ""; position: absolute; left: 19px; top: 24px; bottom: 24px; width: 2px; background: linear-gradient(var(--line), var(--line)); }
+.stop { display: grid; grid-template-columns: 40px 1fr; gap: 12px; position: relative; }
+.stop .num { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); font-family: var(--f-mono); font-weight: 500; font-size: .85rem; color: var(--muted); z-index: 1; }
+.stop.current .num { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 5px var(--accent-soft); }
+.stop .card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; min-width: 0; }
+.stop .top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; align-items: baseline; }
+.duty { font-weight: 700; font-size: 1rem; }
+.when { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.when .live { color: var(--accent); font-weight: 500; }
+.place { display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: 600; font-size: .9rem; margin-top: 2px; }
+.place svg { width: 14px; height: 14px; flex: none; }
+.note { margin: 6px 0 0; font-size: .92rem; color: var(--muted); }
 
-/* Sonuç kutusu */
-.outcome { margin: 0 22px 22px; border: 2px solid var(--ink); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; position: relative; }
-.outcome .now { font-family: var(--f-display); font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
-.outcome p { margin: 0; max-width: 62ch; }
-.pill { display: inline-block; font-family: var(--f-mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
-.pill.s-gorevde { background: var(--ok-bg); color: var(--ok); }
-.pill.s-terfi { background: var(--accent-soft); color: var(--accent); }
-.pill.s-emekli { background: var(--warn-bg); color: var(--warn); }
-.pill.s-ayrildi, .pill.s-diger { background: var(--grey-bg); color: var(--muted); }
-.pill.s-vefat { background: var(--grey-bg); color: var(--ink); }
-.stamp {
-  position: absolute; right: 14px; top: -14px; background: var(--sheet); padding: 0 8px;
-  font-family: var(--f-mono); font-size: .7rem; letter-spacing: .1em; color: var(--stamp); text-transform: uppercase;
-}
-.sample { font-family: var(--f-mono); font-size: .68rem; letter-spacing: .06em; color: var(--stamp); border: 1px solid var(--stamp); border-radius: 4px; padding: 0 5px; margin-left: 6px; text-transform: uppercase; vertical-align: middle; }
+/* Bugün */
+.today { margin: 0 24px 24px; border-radius: 20px; padding: 18px 20px; display: grid; gap: 8px; background: var(--st-soft, var(--grey-soft)); border: 1px solid var(--line); }
+.today .lbl { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--st, var(--grey)); display: flex; align-items: center; gap: 8px; }
+.today .lbl .dot { background: var(--st, var(--grey)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--st, var(--grey)) 20%, transparent); }
+.today .big { font-family: var(--f-display); font-weight: 800; font-size: 1.45rem; letter-spacing: -.02em; line-height: 1.2; }
+.today p { margin: 0; max-width: 66ch; }
+.st-gorevde { --st: var(--ok); --st-soft: var(--ok-soft); }
+.st-terfi { --st: var(--blue); --st-soft: var(--blue-soft); }
+.st-emekli { --st: var(--amber); --st-soft: var(--amber-soft); }
+.st-ayrildi, .st-diger, .st-vefat { --st: var(--grey); --st-soft: var(--grey-soft); }
 
-.empty { padding: 40px 24px; text-align: center; color: var(--muted); }
-.empty h2 { font-family: var(--f-display); color: var(--ink); margin: 0 0 6px; }
-.notice { font-size: .82rem; color: var(--muted); }
+.empty { padding: 56px 24px; text-align: center; color: var(--muted); display: grid; justify-items: center; gap: 10px; }
+.empty .ill { width: 72px; height: 72px; border-radius: 22px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.empty .ill svg { width: 34px; height: 34px; }
+.empty h2 { font-family: var(--f-display); color: var(--ink); margin: 0; letter-spacing: -.02em; }
+.empty p { margin: 0; max-width: 40ch; }
+.notice { font-size: .8rem; color: var(--muted); margin: 0; }
+.muted { color: var(--muted); }
+
+/* Yüzen buton */
+.fab { position: fixed; right: max(18px, calc(env(safe-area-inset-right, 0px) + 12px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); z-index: 25; width: 58px; height: 58px; border-radius: 18px; border: none; background: var(--ink); color: var(--bg); box-shadow: 0 12px 28px -8px rgba(0,0,0,.45); display: none; place-items: center; }
+.fab svg { width: 26px; height: 26px; }
+@media (max-width: 680px) { .fab { display: grid; } }
 
 /* Form */
-dialog { border: none; border-radius: 14px; padding: 0; width: min(680px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--sheet); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
-dialog::backdrop { background: rgba(10,16,22,.55); }
-.form { display: flex; flex-direction: column; }
-.form header { padding: 18px 20px 10px; border-bottom: 1px solid var(--line); }
-.form header h2 { font-family: var(--f-display); margin: 0; }
-.form .body { padding: 16px 20px; display: grid; gap: 14px; overflow-y: auto; }
-.form footer { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+dialog { border: none; border-radius: 24px; padding: 0; width: min(680px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); background: var(--surface); color: var(--ink); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+dialog::backdrop { background: rgba(8,12,10,.5); backdrop-filter: blur(4px); }
+@media (max-width: 600px) {
+  dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 24px 24px 0 0; max-height: 92dvh; }
+}
+.form { display: flex; flex-direction: column; max-height: inherit; }
+.form header { padding: 18px 22px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.form header h2 { font-family: var(--f-display); font-weight: 800; letter-spacing: -.02em; margin: 0; font-size: 1.4rem; }
+.form .body { padding: 4px 22px 18px; display: grid; gap: 16px; overflow-y: auto; }
+.form footer { padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+.group { display: grid; gap: 12px; }
+.group-title { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 560px) { .fields { grid-template-columns: 1fr; } }
 .full { grid-column: 1 / -1; }
-label.f { display: grid; gap: 4px; font-size: .82rem; font-weight: 500; color: var(--muted); min-width: 0; }
-label.f input, label.f select, label.f textarea {
-  border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 8px 10px; color: var(--ink); width: 100%; min-width: 0;
-}
-textarea { resize: vertical; min-height: 64px; }
-fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
-legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
-.duty-row { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 10px; }
-.duty-row .bar { display: flex; justify-content: space-between; align-items: center; }
-.photo-pick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.err { color: var(--stamp); font-size: .85rem; }
+label.f { display: grid; gap: 5px; font-size: .82rem; font-weight: 600; min-width: 0; }
+label.f input, label.f select, label.f textarea { border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; width: 100%; min-width: 0; font-weight: 400; outline: none; transition: border-color .15s, box-shadow .15s; }
+label.f input:focus, label.f select:focus, label.f textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+textarea { resize: vertical; min-height: 70px; }
+.duty-row { border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 10px; background: var(--surface-2); }
+.duty-row label.f input, .duty-row label.f textarea { background: var(--surface); }
+.duty-row .bar { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: .85rem; }
+.photo-pick { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.photo-pick .avatar.big { border-width: 0; box-shadow: none; width: 80px; height: 80px; border-radius: 22px; font-size: 1.8rem; }
+.err { color: var(--danger); font-size: .85rem; font-weight: 600; margin: 0; }
+.sep { height: 1px; background: var(--line); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .file { animation: open .25s ease-out; }
-  @keyframes open { from { transform: translateY(4px); opacity: .6; } to { transform: none; opacity: 1; } }
+  .profile { animation: rise .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes rise { from { transform: translateY(8px); opacity: .4; } to { transform: none; opacity: 1; } }
+  dialog[open] { animation: pop .25s cubic-bezier(.2,.8,.2,1); }
+  @keyframes pop { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
 </style>
 
-<div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <h1>Görev Sicili</h1>
-      <p>Kim, nerede görev aldı, sonra ne oldu.</p>
+<header class="topbar">
+  <div class="inner">
+    <div class="logo">
+      <div class="logo-mark" aria-hidden="true">GS</div>
+      <div class="logo-name">Görev Sicili<small>Kim, nerede görev aldı, sonra ne oldu</small></div>
     </div>
-    <div class="stats" aria-label="Özet">
-      <div><b id="st-people">0</b>kişi</div>
-      <div><b id="st-duties">0</b>görev</div>
-      <div><b id="st-places">0</b>yer</div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input class="search" id="search" type="search" placeholder="İsim, görev yeri, unvan ara…" aria-label="Ara">
     </div>
-    <button class="btn primary" id="add-btn" type="button">+ Kişi ekle</button>
-  </header>
-
-  <div class="ig-bar" id="ig-bar">
-    <svg class="ig-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>
-    <span id="ig-view"></span>
-    <form id="ig-form" class="ig-form" hidden>
-      <input id="ig-input" placeholder="@hesabiniz ya da instagram.com/… linki" aria-label="Instagram hesabı" autocomplete="off">
-      <button class="btn small primary" type="submit">Kaydet</button>
-      <button class="btn small" type="button" id="ig-cancel">Vazgeç</button>
-    </form>
+    <button class="btn primary add-top" id="add-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Kişi ekle
+    </button>
   </div>
+</header>
+
+<div class="inner">
+  <section class="overview" aria-label="Özet">
+    <div class="stat"><b id="st-people">0</b><span>kişi</span></div>
+    <div class="stat"><b id="st-duties">0</b><span>görev kaydı</span></div>
+    <div class="stat"><b id="st-places">0</b><span>farklı görev yeri</span></div>
+    <div class="stat ig-card" id="ig-bar">
+      <div class="ig-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg></div>
+      <div class="ig-text" id="ig-view"></div>
+      <form id="ig-form" class="ig-form" hidden>
+        <input id="ig-input" placeholder="@hesabiniz ya da instagram.com/… linki" aria-label="Instagram hesabı" autocomplete="off">
+        <button class="btn small primary" type="submit">Kaydet</button>
+        <button class="btn small ghost" type="button" id="ig-cancel">Vazgeç</button>
+      </form>
+    </div>
+  </section>
 
   <div class="grid">
     <aside class="shelf">
-      <input class="search" id="search" type="search" placeholder="Ara: isim, görev yeri, unvan…" aria-label="Ara">
       <div class="chips" id="chips" role="group" aria-label="Duruma göre süz"></div>
       <div class="list" id="list"></div>
       <p class="notice" id="notice"></p>
     </aside>
-    <main id="detail" class="file" aria-live="polite"></main>
+    <main id="detail" aria-live="polite"></main>
   </div>
 </div>
 
+<button class="fab" id="fab" type="button" aria-label="Kişi ekle">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
 <dialog id="dlg">
   <form class="form" id="form" novalidate>
-    <header><h2 id="form-title">Yeni kişi</h2></header>
+    <header>
+      <h2 id="form-title">Yeni kişi</h2>
+      <button class="btn small ghost" type="button" id="f-x" aria-label="Kapat">✕</button>
+    </header>
     <div class="body">
-      <fieldset>
-        <legend>Kişi tanımı</legend>
+      <div class="group">
+        <div class="group-title">Kişi tanımı</div>
         <div class="photo-pick">
           <div class="avatar big" id="f-photo-prev">?</div>
-          <div style="display:grid;gap:6px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
             <label class="btn small" for="f-photo">Fotoğraf seç</label>
             <input id="f-photo" type="file" accept="image/*" hidden>
-            <button class="btn small" type="button" id="f-photo-clear">Fotoğrafı kaldır</button>
+            <button class="btn small ghost" type="button" id="f-photo-clear">Kaldır</button>
           </div>
         </div>
         <div class="fields">
-          <label class="f full">Ad Soyad *<input id="f-name" required autocomplete="off"></label>
+          <label class="f full">Ad Soyad *<input id="f-name" required autocomplete="off" placeholder="örn. Ali Yılmaz"></label>
           <label class="f">Doğum yılı / tarihi<input id="f-born" placeholder="örn. 1968"></label>
           <label class="f">Memleket<input id="f-home" placeholder="örn. Sivas"></label>
           <label class="f full">Instagram<input id="f-ig" placeholder="@kullaniciadi" autocomplete="off"></label>
           <label class="f full">Kısa tanım<textarea id="f-desc" placeholder="Kim olduğu, mesleği, öne çıkan özelliği…"></textarea></label>
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Görev yerleri</legend>
+      </div>
+      <div class="sep"></div>
+      <div class="group">
+        <div class="group-title">Görev yerleri</div>
         <div id="f-duties" style="display:grid;gap:10px"></div>
         <button class="btn small" type="button" id="f-add-duty">+ Görev ekle</button>
-      </fieldset>
-
-      <fieldset>
-        <legend>Ne oldu, neci oldu?</legend>
+      </div>
+      <div class="sep"></div>
+      <div class="group">
+        <div class="group-title">Ne oldu, neci oldu?</div>
         <div class="fields">
           <label class="f">Durum
             <select id="f-status">
@@ -269,11 +320,11 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
           <label class="f">Bugün ne / neci?<input id="f-now" placeholder="örn. İl Müdürü oldu"></label>
           <label class="f full">Hikâyesi / ne oldu?<textarea id="f-story" placeholder="Görevlerden sonra neler yaşandı…"></textarea></label>
         </div>
-      </fieldset>
+      </div>
       <p class="err" id="f-err" hidden></p>
     </div>
     <footer>
-      <button class="btn" type="button" id="f-cancel">Vazgeç</button>
+      <button class="btn ghost" type="button" id="f-cancel">Vazgeç</button>
       <button class="btn primary" type="submit" id="f-save">Kaydet</button>
     </footer>
   </form>
@@ -281,15 +332,13 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
 
 <script>
 (function () {
-  const STATUS = {
-    gorevde: "Görevde", terfi: "Terfi etti", emekli: "Emekli", ayrildi: "Ayrıldı", vefat: "Vefat etti", diger: "Diğer"
-  };
+  const STATUS = { gorevde: "Görevde", terfi: "Terfi etti", emekli: "Emekli", ayrildi: "Ayrıldı", vefat: "Vefat etti", diger: "Diğer" };
   const LS_KEY = "gorev-sicili-v1";
+  const IG_KEY = "gorev-sicili-instagram";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const initials = (n) => (n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toLocaleUpperCase("tr");
   const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  // "@ad", "ad", "instagram.com/ad/" ya da tam link → "ad"
   const igHandle = (s) => {
     let t = String(s || "").trim();
     const m = t.match(/instagram\.com\/([^/?#\s]+)/i);
@@ -298,62 +347,49 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     return /^[A-Za-z0-9._]{1,30}$/.test(t) ? t : "";
   };
   const igLink = (h) => `<a href="https://www.instagram.com/${encodeURIComponent(h)}/" target="_blank" rel="noopener">@${esc(h)}</a>`;
-  const IG_KEY = "gorev-sicili-instagram";
-  let siteIg = "";
+  // İsimden sabit bir renk tonu → kişiye özel kapak
+  const hueOf = (s) => { let h = 0; for (const ch of String(s || "")) h = (h * 31 + ch.codePointAt(0)) % 360; return h; };
+  const grad = (name) => { const h = hueOf(name); return `linear-gradient(135deg, hsl(${h} 62% 42%), hsl(${(h + 48) % 360} 70% 52%))`; };
+
+  const I = {
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    cake: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M12 11V7M4 15c2.5 1.5 5.5 1.5 8 0s5.5-1.5 8 0"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></svg>',
+    ig: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+    folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'
+  };
 
   const EXAMPLES = [
-    {
-      id: "ornek-1", example: true, name: "Ayşe Demir", born: "1972", home: "Trabzon",
+    { id: "ornek-1", example: true, name: "Ayşe Demir", born: "1972", home: "Trabzon",
       desc: "Matematik öğretmeni olarak başladı, Karadeniz'deki köy okullarında yıllarca çalıştı.",
       duties: [
         { place: "Uzungöl İlkokulu, Çaykara", role: "Sınıf öğretmeni", start: "1995", end: "2001", note: "Köyde ilk bilgisayar sınıfını kurdu." },
         { place: "Of Anadolu Lisesi", role: "Matematik öğretmeni", start: "2001", end: "2012", note: "Öğrencileri iki kez bölge birincisi oldu." },
-        { place: "Trabzon İl Milli Eğitim", role: "Şube müdürü", start: "2012", end: "", note: "" }
-      ],
-      status: "terfi", now: "İl Milli Eğitim Şube Müdürü", story: "Öğretmenlikten idareciliğe geçti; köy okullarındaki tecrübesiyle taşımalı eğitim planını hazırladı."
-    },
-    {
-      id: "ornek-2", example: true, name: "Mehmet Kaya", born: "1958", home: "Erzurum",
+        { place: "Trabzon İl Milli Eğitim", role: "Şube müdürü", start: "2012", end: "", note: "" } ],
+      status: "terfi", now: "İl Milli Eğitim Şube Müdürü", story: "Öğretmenlikten idareciliğe geçti; köy okullarındaki tecrübesiyle taşımalı eğitim planını hazırladı." },
+    { id: "ornek-2", example: true, name: "Mehmet Kaya", born: "1958", home: "Erzurum",
       desc: "Uzun yıllar sahada çalışmış bir orman muhafaza memuru.",
       duties: [
         { place: "Sarıkamış Orman İşletmesi", role: "Orman muhafaza memuru", start: "1980", end: "1994", note: "Büyük yangında ekibini yönetti." },
-        { place: "Bolu Orman Bölge Müdürlüğü", role: "Bölge şefi", start: "1994", end: "2018", note: "" }
-      ],
-      status: "emekli", now: "Emekli, köyünde arıcılık yapıyor", story: "2018'de emekli oldu. Şimdi gençlere doğa yürüyüşleri düzenliyor."
-    },
-    {
-      id: "ornek-3", example: true, name: "Zeynep Arslan", born: "1990", home: "İzmir",
-      desc: "Acil servis hemşiresi.",
+        { place: "Bolu Orman Bölge Müdürlüğü", role: "Bölge şefi", start: "1994", end: "2018", note: "" } ],
+      status: "emekli", now: "Emekli, köyünde arıcılık yapıyor", story: "2018'de emekli oldu. Şimdi gençlere doğa yürüyüşleri düzenliyor." },
+    { id: "ornek-3", example: true, name: "Zeynep Arslan", born: "1990", home: "İzmir", desc: "Acil servis hemşiresi.",
       duties: [
         { place: "Hakkari Devlet Hastanesi", role: "Acil servis hemşiresi", start: "2013", end: "2017", note: "Zorunlu hizmetini burada tamamladı." },
-        { place: "İzmir Şehir Hastanesi", role: "Sorumlu hemşire", start: "2017", end: "", note: "" }
-      ],
-      status: "gorevde", now: "Sorumlu hemşire", story: ""
-    }
+        { place: "İzmir Şehir Hastanesi", role: "Sorumlu hemşire", start: "2017", end: "", note: "" } ],
+      status: "gorevde", now: "Sorumlu hemşire", story: "" }
   ];
 
-  let people = [];
-  let selectedId = null;
-  let filter = "all";
-  let query = "";
-  let db = null;          // claude db namespace, if served
-  let mode = "local";
-  let editing = null;     // person being edited
-  let photoData = "";
+  let people = [], selectedId = null, filter = "all", query = "";
+  let db = null, mode = "local", editing = null, photoData = "", siteIg = "";
 
-  /* ---------- storage ---------- */
+  /* ---------- kayıt ---------- */
   function lsRead() { try { const t = localStorage.getItem(LS_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
   function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify(people)); } catch (e) {} }
-
   async function savePerson(p) {
-    if (mode === "db") {
-      const body = JSON.parse(JSON.stringify(p)); delete body.id;
-      await db.collection("people").doc(p.id).set(body);
-    } else {
-      const i = people.findIndex((x) => x.id === p.id);
-      if (i >= 0) people[i] = p; else people.push(p);
-      lsWrite(); render();
-    }
+    if (mode === "db") { const body = JSON.parse(JSON.stringify(p)); delete body.id; await db.collection("people").doc(p.id).set(body); }
+    else { const i = people.findIndex((x) => x.id === p.id); if (i >= 0) people[i] = p; else people.push(p); lsWrite(); render(); }
   }
   async function removePerson(id) {
     if (mode === "db") await db.collection("people").doc(id).delete();
@@ -363,28 +399,25 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
   /* ---------- hesabın Instagram'ı ---------- */
   function renderIg() {
     $("ig-view").innerHTML = siteIg
-      ? `Instagram hesabımız: ${igLink(siteIg)} <button class="btn small" type="button" id="ig-edit">Değiştir</button>`
-      : `Hesabınızın Instagram adresi henüz eklenmedi. <button class="btn small" type="button" id="ig-edit">Instagram ekle</button>`;
-    $("ig-edit").onclick = () => {
-      $("ig-view").hidden = true; $("ig-form").hidden = false;
-      $("ig-input").value = siteIg ? "@" + siteIg : ""; $("ig-input").focus();
-    };
+      ? `<span class="lbl">Instagram hesabımız</span><span>${igLink(siteIg)}</span>`
+      : `<span class="lbl">Instagram hesabımız</span><span class="empty-ig">Henüz eklenmedi</span>`;
+    let b = $("ig-edit");
+    if (!b) { b = document.createElement("button"); b.id = "ig-edit"; b.type = "button"; b.className = "btn small"; $("ig-bar").insertBefore(b, $("ig-form")); }
+    b.textContent = siteIg ? "Değiştir" : "Instagram ekle";
+    b.onclick = () => { $("ig-view").hidden = true; b.hidden = true; $("ig-form").hidden = false; $("ig-input").value = siteIg ? "@" + siteIg : ""; $("ig-input").focus(); };
   }
-  function closeIgForm() { $("ig-form").hidden = true; $("ig-view").hidden = false; }
+  function closeIgForm() { $("ig-form").hidden = true; $("ig-view").hidden = false; if ($("ig-edit")) $("ig-edit").hidden = false; }
   $("ig-cancel").onclick = closeIgForm;
   $("ig-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const raw = $("ig-input").value.trim();
-    const h = igHandle(raw);
+    const raw = $("ig-input").value.trim(), h = igHandle(raw);
     if (raw && !h) { $("ig-input").setCustomValidity("Geçerli bir Instagram kullanıcı adı yaz (harf, rakam, nokta, alt çizgi)."); $("ig-input").reportValidity(); return; }
     $("ig-input").setCustomValidity("");
     try {
       if (mode === "db") await db.doc("settings/site").set({ instagram: h });
       else { try { localStorage.setItem(IG_KEY, h); } catch (err) {} }
       siteIg = h; closeIgForm(); renderIg();
-    } catch (err) {
-      $("ig-input").setCustomValidity("Kaydedilemedi, tekrar dene."); $("ig-input").reportValidity();
-    }
+    } catch (err) { $("ig-input").setCustomValidity("Kaydedilemedi, tekrar dene."); $("ig-input").reportValidity(); }
   });
   $("ig-input").addEventListener("input", () => $("ig-input").setCustomValidity(""));
 
@@ -398,7 +431,6 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     $("notice").textContent = note || "Kayıtlar bu cihazda, tarayıcıda saklanıyor.";
     render();
   }
-
   async function startDb() {
     $("notice").textContent = "Kayıtlar yükleniyor…";
     let ns = null;
@@ -411,24 +443,22 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
       people = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       if (!snap.metadata.fromCache) { clearTimeout(timer); $("notice").textContent = "Kayıtlar bu sayfada saklanıyor; sayfayı açan herkes görür."; }
       render();
-    }, (err) => {
-      clearTimeout(timer);
-      $("notice").textContent = "Kayıtlar okunamadı (" + err.code + ").";
-    });
+    }, (err) => { clearTimeout(timer); $("notice").textContent = "Kayıtlar okunamadı (" + err.code + ")."; });
   }
 
-  /* ---------- render ---------- */
-  function sortedPeople() { return [...people].sort((a, b) => (a.name || "").localeCompare(b.name || "", "tr")); }
+  /* ---------- görünüm ---------- */
+  const sortedPeople = () => [...people].sort((a, b) => (a.name || "").localeCompare(b.name || "", "tr"));
   function matches(p) {
     if (filter !== "all" && p.status !== filter) return false;
     if (!query) return true;
-    const hay = [p.name, p.desc, p.home, p.now, p.story, ...(p.duties || []).flatMap((d) => [d.place, d.role, d.note])].join(" ").toLocaleLowerCase("tr");
+    const hay = [p.name, p.desc, p.home, p.now, p.story, p.instagram, ...(p.duties || []).flatMap((d) => [d.place, d.role, d.note])].join(" ").toLocaleLowerCase("tr");
     return hay.includes(query);
   }
-  function lastDuty(p) { const d = p.duties || []; return d[d.length - 1]; }
+  const lastDuty = (p) => { const d = p.duties || []; return d[d.length - 1]; };
   function avatarHtml(p, big) {
     const cls = "avatar" + (big ? " big" : "");
-    return p.photo ? `<img class="${cls}" src="${esc(p.photo)}" alt="">` : `<span class="${cls}" aria-hidden="true">${esc(initials(p.name))}</span>`;
+    return p.photo ? `<img class="${cls}" src="${esc(p.photo)}" alt="">`
+      : `<span class="${cls}" style="--hue-grad:${grad(p.name)}" aria-hidden="true">${esc(initials(p.name))}</span>`;
   }
 
   function render() {
@@ -439,7 +469,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
 
     const counts = {}; all.forEach((p) => { counts[p.status] = (counts[p.status] || 0) + 1; });
     $("chips").innerHTML = [["all", "Hepsi", all.length], ...Object.keys(STATUS).filter((k) => counts[k]).map((k) => [k, STATUS[k], counts[k]])]
-      .map(([k, label, n]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${esc(label)} · ${n}</button>`).join("");
+      .map(([k, label, n]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${esc(label)}<i>${n}</i></button>`).join("");
 
     const shown = all.filter(matches);
     if (!shown.find((p) => p.id === selectedId)) selectedId = shown[0] ? shown[0].id : null;
@@ -447,7 +477,8 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
       const d = lastDuty(p);
       const sub = p.now || (d ? `${d.role || ""}${d.place ? " · " + d.place : ""}` : p.desc || "");
       return `<button class="row" type="button" data-id="${esc(p.id)}" aria-current="${p.id === selectedId}">
-        ${avatarHtml(p)}<span class="who"><span class="name">${esc(p.name)}</span><span class="sub">${esc(sub)}</span></span></button>`;
+        ${avatarHtml(p)}<span class="who"><span class="name">${esc(p.name)}</span><span class="sub">${esc(sub)}</span></span>
+        <span class="dot s-${esc(p.status)}" title="${esc(STATUS[p.status] || "")}"></span></button>`;
     }).join("") : `<p class="notice">${people.length ? "Aramaya uyan kimse yok." : "Henüz kimse eklenmedi."}</p>`;
 
     renderDetail(people.find((p) => p.id === selectedId));
@@ -456,42 +487,51 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
   function renderDetail(p) {
     const el = $("detail");
     if (!p) {
-      el.innerHTML = `<div class="empty"><h2>Dosya boş</h2><p>İlk kişiyi eklemek için <b>+ Kişi ekle</b>'ye dokun. Tanımını, görev yerlerini ve sonunda ne olduğunu yaz.</p></div>`;
+      el.className = "profile";
+      el.innerHTML = `<div class="empty"><div class="ill">${I.folder}</div><h2>Henüz dosya yok</h2><p>İlk kişiyi eklemek için <b>Kişi ekle</b>'ye dokun. Tanımını, görev yerlerini ve sonunda ne olduğunu yaz.</p></div>`;
       return;
     }
+    el.className = "profile";
     const duties = p.duties || [];
-    const facts = [p.born && `<span>Doğum <b>${esc(p.born)}</b></span>`, p.home && `<span>Memleket <b>${esc(p.home)}</b></span>`, igHandle(p.instagram) && `<span>Instagram ${igLink(igHandle(p.instagram))}</span>`, duties.length && `<span><b>${duties.length}</b> görev yeri</span>`].filter(Boolean).join("");
+    const ig = igHandle(p.instagram);
+    const chips = [
+      p.born && `<span class="mchip">${I.cake}${esc(p.born)}</span>`,
+      p.home && `<span class="mchip">${I.home}${esc(p.home)}</span>`,
+      ig && `<span class="mchip">${I.ig}${igLink(ig)}</span>`
+    ].filter(Boolean).join("");
+    const live = (i, d) => i === duties.length - 1 && !d.end && (p.status === "gorevde" || p.status === "terfi");
     el.innerHTML = `
-      <div class="file-head">
+      <div class="cover" style="--hue-grad:${grad(p.name)}">${p.example ? '<span class="tag-sample">Örnek kayıt</span>' : ""}</div>
+      <div class="p-head">
         ${avatarHtml(p, true)}
-        <div class="meta">
-          <div class="eyebrow">Kişi dosyası${p.example ? '<span class="sample">örnek</span>' : ""}</div>
-          <h2>${esc(p.name)}</h2>
-          ${p.desc ? `<p class="desc">${esc(p.desc)}</p>` : ""}
-          ${facts ? `<div class="facts">${facts}</div>` : ""}
-        </div>
         <div class="actions">
-          <button class="btn small" type="button" id="edit-btn">Düzenle</button>
+          <button class="btn small" type="button" id="edit-btn">${I.edit}Düzenle</button>
           <button class="btn small danger" type="button" id="del-btn">Sil</button>
         </div>
       </div>
-      <section class="section">
-        <h3>Görev yerleri <small>${duties.length ? "eskiden yeniye" : ""}</small></h3>
-        ${duties.length ? `<ol class="timeline">${duties.map((d, i) => {
-          const cur = i === duties.length - 1 && !d.end && p.status === "gorevde" || (i === duties.length - 1 && !d.end && p.status === "terfi");
-          const when = [d.start, d.end || (d.start ? "…" : "")].filter(Boolean).join(" – ");
-          return `<li class="${cur ? "current" : ""}">
-            ${when ? `<div class="when">${esc(when)}</div>` : ""}
-            <div class="duty">${esc(d.role || "Görev")}</div>
-            ${d.place ? `<div class="place">${esc(d.place)}</div>` : ""}
-            ${d.note ? `<p class="note">${esc(d.note)}</p>` : ""}
-          </li>`; }).join("")}</ol>` : `<p class="notice">Görev yeri eklenmemiş.</p>`}
-      </section>
-      <div class="outcome">
-        <span class="stamp">Sonuç</span>
-        <div><span class="pill s-${esc(p.status || "diger")}">${esc(STATUS[p.status] || "Diğer")}</span></div>
+      <div class="p-id">
+        <h2>${esc(p.name)}</h2>
         ${p.now ? `<div class="now">${esc(p.now)}</div>` : ""}
-        ${p.story ? `<p>${esc(p.story)}</p>` : (!p.now ? `<p class="notice">Ne olduğu henüz yazılmamış.</p>` : "")}
+        ${chips ? `<div class="meta-chips">${chips}</div>` : ""}
+      </div>
+      ${p.desc ? `<p class="about">${esc(p.desc)}</p>` : ""}
+      <section class="block">
+        <div class="block-title"><h3>Görev yolculuğu</h3><small>${duties.length ? duties.length + " durak" : ""}</small></div>
+        ${duties.length ? `<ol class="journey">${duties.map((d, i) => {
+          const cur = live(i, d);
+          const when = d.start || d.end ? `${esc(d.start || "?")} – ${d.end ? esc(d.end) : '<span class="live">bugün</span>'}` : "";
+          return `<li class="stop${cur ? " current" : ""}">
+            <span class="num">${String(i + 1).padStart(2, "0")}</span>
+            <div class="card">
+              <div class="top"><span class="duty">${esc(d.role || "Görev")}</span>${when ? `<span class="when">${when}</span>` : ""}</div>
+              ${d.place ? `<div class="place">${I.pin}${esc(d.place)}</div>` : ""}
+              ${d.note ? `<p class="note">${esc(d.note)}</p>` : ""}
+            </div></li>`; }).join("")}</ol>` : `<p class="notice">Görev yeri eklenmemiş.</p>`}
+      </section>
+      <div class="today st-${esc(p.status || "diger")}">
+        <div class="lbl"><span class="dot"></span>Ne oldu · ${esc(STATUS[p.status] || "Diğer")}</div>
+        ${p.now ? `<div class="big">${esc(p.now)}</div>` : ""}
+        ${p.story ? `<p>${esc(p.story)}</p>` : (!p.now ? `<p class="muted">Ne olduğu henüz yazılmamış.</p>` : "")}
       </div>`;
     $("edit-btn").onclick = () => openForm(p);
     const del = $("del-btn");
@@ -507,7 +547,7 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
     const wrap = document.createElement("div");
     wrap.className = "duty-row";
     wrap.innerHTML = `
-      <div class="bar"><span class="eyebrow">Görev</span><button class="btn small" type="button" data-rm>Kaldır</button></div>
+      <div class="bar"><span>Görev</span><button class="btn small ghost" type="button" data-rm>Kaldır</button></div>
       <div class="fields">
         <label class="f">Görev yeri<input data-k="place" placeholder="örn. Kars Devlet Hastanesi" value="${esc(d.place)}"></label>
         <label class="f">Görevi / unvanı<input data-k="role" placeholder="örn. Başhekim" value="${esc(d.role)}"></label>
@@ -520,19 +560,15 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
   }
   function setPhotoPreview() {
     const prev = $("f-photo-prev");
+    prev.style.setProperty("--hue-grad", grad($("f-name").value));
     prev.innerHTML = photoData ? `<img src="${esc(photoData)}" alt="" style="width:100%;height:100%;object-fit:cover">` : esc(initials($("f-name").value));
   }
   function openForm(p) {
     editing = p || null;
     $("form-title").textContent = p ? "Kişiyi düzenle" : "Yeni kişi";
-    $("f-name").value = p?.name || "";
-    $("f-born").value = p?.born || "";
-    $("f-home").value = p?.home || "";
-    $("f-desc").value = p?.desc || "";
-    $("f-ig").value = p?.instagram ? "@" + p.instagram : "";
-    $("f-status").value = p?.status || "gorevde";
-    $("f-now").value = p?.now || "";
-    $("f-story").value = p?.story || "";
+    $("f-name").value = p?.name || ""; $("f-born").value = p?.born || ""; $("f-home").value = p?.home || "";
+    $("f-desc").value = p?.desc || ""; $("f-ig").value = p?.instagram ? "@" + p.instagram : "";
+    $("f-status").value = p?.status || "gorevde"; $("f-now").value = p?.now || ""; $("f-story").value = p?.story || "";
     photoData = p?.photo || "";
     const box = $("f-duties"); box.innerHTML = "";
     (p?.duties?.length ? p.duties : [{}]).forEach((d) => box.appendChild(dutyRow(d)));
@@ -544,13 +580,14 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
 
   $("f-add-duty").onclick = () => { const r = dutyRow(); $("f-duties").appendChild(r); r.querySelector("input").focus(); };
   $("f-cancel").onclick = () => $("dlg").close();
-  $("f-name").addEventListener("input", () => { if (!photoData) setPhotoPreview(); });
+  $("f-x").onclick = () => $("dlg").close();
+  $("f-name").addEventListener("input", setPhotoPreview);
   $("f-photo-clear").onclick = () => { photoData = ""; setPhotoPreview(); };
   $("f-photo").addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => {
-      const S = 240, c = document.createElement("canvas"); c.width = c.height = S;
+      const S = 260, c = document.createElement("canvas"); c.width = c.height = S;
       const s = Math.min(img.width, img.height);
       c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, S, S);
       photoData = c.toDataURL("image/jpeg", 0.82); URL.revokeObjectURL(url); setPhotoPreview();
@@ -575,23 +612,22 @@ legend { font-family: var(--f-display); font-weight: 700; padding: 0 6px; }
       updatedAt: new Date().toISOString()
     };
     const btn = $("f-save"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
-    try {
-      await savePerson(p);
-      selectedId = p.id; $("dlg").close(); render();
-    } catch (err) {
+    try { await savePerson(p); selectedId = p.id; $("dlg").close(); render(); }
+    catch (err) {
       $("f-err").textContent = err && err.code === "invalid_argument" ? "Bu sayfaya kayıt ekleme iznin yok." : err && err.code === "quota_exceeded" ? "Kayıt alanı doldu; bazı kişileri silip tekrar dene." : "Kaydedilemedi, tekrar dene.";
       $("f-err").hidden = false;
     } finally { btn.disabled = false; btn.textContent = "Kaydet"; }
   });
 
-  /* ---------- events ---------- */
+  /* ---------- olaylar ---------- */
   $("add-btn").onclick = () => openForm(null);
+  $("fab").onclick = () => openForm(null);
   $("search").addEventListener("input", (e) => { query = e.target.value.trim().toLocaleLowerCase("tr"); render(); });
   $("chips").addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (b) { filter = b.dataset.f; render(); } });
   $("list").addEventListener("click", (e) => {
     const b = e.target.closest("[data-id]"); if (!b) return;
     selectedId = b.dataset.id; render();
-    if (window.matchMedia("(max-width: 820px)").matches) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (window.matchMedia("(max-width: 860px)").matches) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   render();
