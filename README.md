@@ -15,11 +15,11 @@ Etkinlikleri, duyuruları ve haberleri tek yerde toplayan basit bir pano.
 
 Kaynak: `src/gorev-sicili.html` — `index.html` bu dosyanın tam sayfa sürümüdür.
 
-## Herkese açık uygulama (docs/)
+## Herkese açık uygulama
 
-`docs/` klasörü telefona yüklenebilen (PWA) herkese açık sürümdür. Ziyaretçiler okur; ekleme ve düzenleme yalnızca yönetici girişiyle yapılır. Veriler Firebase Firestore'da tutulur.
+Ana klasördeki `index.html` telefona yüklenebilen (PWA) herkese açık sürümdür. Ziyaretçiler okur; ekleme ve düzenleme yalnızca yönetici girişiyle yapılır. Veriler Firebase Firestore'da tutulur.
 
 Kurulum:
-1. GitHub: Settings → Pages → "Deploy from a branch" → dal `gorev-sicili`, klasör `/docs`.
-2. Firebase: proje oluştur → Firestore Database (production mode) → `docs/firestore.rules` içeriğini Rules sekmesine yapıştırıp yönetici e-postasını yaz → Authentication'da Email/Password'ü aç ve yönetici kullanıcısını ekle → Authorized domains'e GitHub Pages alan adını ekle.
-3. Proje ayarlarındaki web uygulamasının `firebaseConfig` değerini `docs/config.js` içine yaz.
+1. GitHub: Settings → Pages → "Deploy from a branch" → dal `main`, klasör `/ (root)`.
+2. Firebase: proje oluştur → Firestore Database (production mode) → `firestore.rules` içeriğini Rules sekmesine yapıştırıp yönetici e-postasını yaz → Authentication'da Email/Password'ü aç ve yönetici kullanıcısını ekle → Authorized domains'e GitHub Pages alan adını ekle.
+3. Proje ayarlarındaki web uygulamasının `firebaseConfig` değerini `config.js` içine yaz.
