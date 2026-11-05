@@ -256,6 +256,9 @@ main { padding-bottom: 104px; display: grid; gap: 22px; }
 @media (max-width: 680px) { .fab { display: grid; } }
 
 /* Videolar */
+.yts { display: grid; gap: 10px; }
+.yt { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; max-width: 100%; }
+.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .vids { display: grid; gap: 10px; }
 .vids video { width: 100%; max-height: 72vh; border-radius: 12px; background: #000; display: block; }
 .vthumb video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
@@ -910,7 +913,8 @@ body:not(.is-admin) .admin-only { display: none !important; }
     const ph = photosOf(a);
     return `<button class="news-hero" type="button" data-id="${esc(a.id)}">
       ${ph.length ? `<span class="nimg-wrap"><img class="hero-img" src="${esc(fullSrc(ph[0]))}" alt="" loading="lazy">${ph.length > 1 || (a.videos && a.videos.length) ? `<span class="pcount">${ph.length > 1 ? I.image + ph.length : ""}${a.videos && a.videos.length ? " " + I.video + a.videos.length : ""}</span>` : ""}</span>`
-        : (a.videos && a.videos.length ? `<span class="nimg-wrap"><video class="hero-img" src="${esc(vidSrc(a.videos[0]))}#t=0.1" muted playsinline preload="metadata"></video><span class="pcount">${I.video}${a.videos.length}</span></span>` : "")}
+        : (a.videos && a.videos.length ? `<span class="nimg-wrap"><video class="hero-img" src="${esc(vidSrc(a.videos[0]))}#t=0.1" muted playsinline preload="metadata"></video><span class="pcount">${I.video}${a.videos.length}</span></span>`
+        : (a.yt && a.yt.length ? `<span class="nimg-wrap"><img class="hero-img" src="https://i.ytimg.com/vi/${esc(a.yt[0])}/hqdefault.jpg" alt="" loading="lazy"><span class="pcount">${I.video}YouTube</span></span>` : ""))}
       <span class="hero-body">
         <span class="kicker">${I.haber}${esc(shortDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</span>
         <h2>${esc(a.title)}</h2>${a.text ? `<p>${esc(a.text)}</p>` : ""}<span class="read">Devamını oku →</span>
@@ -966,6 +970,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
           <div class="kicker">${I.haber}${esc(longDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</div>
           <h1>${esc(a.title)}</h1>
           <div class="a-text">${paras || '<p class="muted">Bu habere henüz yazı eklenmemiş.</p>'}</div>
+          ${Array.isArray(a.yt) && a.yt.length ? `<div class="yts">${a.yt.map((id) => `<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}" title="YouTube videosu" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`).join("")}</div>` : ""}
           ${Array.isArray(a.videos) && a.videos.length ? `<div><h3 class="gal-h">Videolar <small>${a.videos.length}</small></h3><div class="vids">${a.videos.map((v) => `<video controls playsinline preload="metadata" src="${esc(vidSrc(v))}"></video>`).join("")}</div></div>` : ""}
           ${ph.length > 1 ? `<div><h3 class="gal-h">Fotoğraflar <small>${ph.length}</small></h3><div class="gallery">${ph.map((p, i) => `<button type="button" data-lb="${i}" aria-label="Fotoğraf ${i + 1}"><img src="${esc(srcOf(p))}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
         </div>
@@ -990,9 +995,10 @@ body:not(.is-admin) .admin-only { display: none !important; }
         </div>
         <div class="group">
           <div class="group-title">Videolar</div>
-          <label class="drop" for="n-vids">${I.video}<b>Video yükle</b><span>Kısa videolar, her biri en fazla 25 MB. Uzun videolar için Instagram ya da YouTube linkini yazına ekleyebilirsin.</span></label>
+          <label class="drop" for="n-vids">${I.video}<b>Video yükle</b><span>Her video en fazla 50 MB. Daha uzun videolar için aşağıya YouTube linkini yapıştır.</span></label>
           <input type="file" id="n-vids" accept="video/*" multiple hidden>
           <div class="thumbs" id="n-vthumbs"></div>
+          <label class="f">YouTube video linkleri<textarea id="n-yt" rows="2" placeholder="https://youtu.be/… (her satıra bir link)" autocapitalize="off" spellcheck="false" style="min-height:64px"></textarea></label>
         </div>
         <label class="f">Yazı<textarea class="ed-text" id="n-text" placeholder="Yazını buraya yaz… Her paragrafı yeni satırda başlatabilirsin."></textarea></label>
         <p class="err" id="n-err" hidden></p>
@@ -1000,6 +1006,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
       </form>`;
     $("n-title").value = a?.title || ""; $("n-date").value = a?.date || addDays(0); $("n-text").value = a?.text || "";
     renderThumbs(); renderVThumbs();
+    $("n-yt").value = a && Array.isArray(a.yt) ? a.yt.map((id) => "https://youtu.be/" + id).join("\n") : "";
     $("n-vids").addEventListener("change", (e) => {
       const big = [];
       for (const f of [...(e.target.files || [])]) {
@@ -1008,7 +1015,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
         ed.videos.push({ file: f, url: URL.createObjectURL(f), type: f.type });
       }
       e.target.value = ""; renderVThumbs();
-      if (big.length) { $("n-err").textContent = "Bu video çok büyük (en fazla 25 MB): " + big.join(", ") + ". Daha kısa bir video seç ya da Instagram/YouTube linkini yazına ekle."; $("n-err").hidden = false; }
+      if (big.length) { $("n-err").textContent = "Bu video çok büyük (en fazla 50 MB): " + big.join(", ") + ". Videoyu YouTube'a yükleyip linkini aşağıdaki YouTube kutusuna yapıştır."; $("n-err").hidden = false; }
     });
     $("n-vthumbs").addEventListener("click", (e) => { const b = e.target.closest("[data-vrm]"); if (b) { ed.videos.splice(+b.dataset.vrm, 1); renderVThumbs(); } });
     $("n-files").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
@@ -1026,7 +1033,13 @@ body:not(.is-admin) .admin-only { display: none !important; }
     $("ned").addEventListener("submit", saveNews);
     if (!a) $("n-title").focus();
   }
-  const VIDEO_MAX = 25 * 1024 * 1024;
+  const VIDEO_MAX = 50 * 1024 * 1024;
+  // youtu.be/ID, youtube.com/watch?v=ID, /shorts/ID, /embed/ID, /live/ID
+  function ytId(u) {
+    const m = String(u || "").trim().match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : "";
+  }
+  const ytIds = () => [...new Set(($("n-yt") ? $("n-yt").value : "").split(/\s+/).map(ytId).filter(Boolean))];
   const vidSrc = (v) => v.url || (window.__localImg && window.__localImg[v.src]) || v.src || "";
   function renderVThumbs() {
     const box = $("n-vthumbs"); if (!box || !ed) return;
@@ -1125,7 +1138,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
       const now = new Date().toISOString();
-      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, videos: await saveVideos(), createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
+      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, videos: await saveVideos(), yt: ytIds(), createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "gh" && ed.orig) { const keep = new Set(photos.flatMap((p) => [p.data, p.thumb])); for (const p of photosOf(ed.orig)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/") && !keep.has(f)) await ghDel(f, "Fotoğraf silindi").catch(() => {}); }

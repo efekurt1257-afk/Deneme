@@ -124,7 +124,7 @@ rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { 
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
       const now = new Date().toISOString();
-      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, videos: await saveVideos(), createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
+      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, videos: await saveVideos(), yt: ytIds(), createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "fb" && ed.orig) {
