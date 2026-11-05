@@ -5,6 +5,7 @@ Kişilerin tanımını, görev aldıkları yerleri ve sonunda ne olduklarını (
 - **Kişi tanımı:** ad soyad, fotoğraf, doğum yılı, memleket, kısa tanım
 - **Görev yerleri:** her görev için yer, unvan, başlangıç–bitiş ve "orada ne oldu" notu (zaman çizelgesi olarak gösterilir)
 - **Sonuç:** durum (Görevde, Terfi etti, Emekli, Ayrıldı, Vefat, Diğer), "bugün ne / neci" ve hikâyesi
+- **Gündem:** önümüzdeki günlerin duyuruları (tarih, saat, metin, önemli işareti; geçmiş duyurular ayrı)
 - **Instagram:** üstte hesabımızın Instagram adresi, her kişide de kendi Instagram alanı
 - Arama, duruma göre süzme, düzenleme ve silme
 

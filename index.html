@@ -112,6 +112,36 @@ button { cursor: pointer; }
 .ig-form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; min-width: 0; }
 .ig-form input { flex: 1 1 180px; min-width: 0; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 7px 11px; }
 
+/* Gündem / duyurular */
+.agenda { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 18px; margin-bottom: 22px; display: grid; gap: 12px; box-shadow: var(--shadow-sm); }
+.agenda-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.agenda-head h2 { font-family: var(--f-display); font-weight: 800; font-size: 1.35rem; letter-spacing: -.02em; margin: 0 8px 0 0; display: inline; }
+.agenda-head .muted { font-size: .85rem; }
+.ann-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+.ann { display: grid; grid-template-columns: 58px 1fr; gap: 12px; align-items: start; text-align: left; width: 100%; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); transition: transform .15s, box-shadow .15s, border-color .15s; }
+.ann:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.ann-date { display: grid; justify-items: center; align-content: center; height: 62px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); line-height: 1.05; }
+.ann-date b { font-family: var(--f-display); font-weight: 800; font-size: 1.6rem; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.ann-date span { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.ann.is-today { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ann.is-today .ann-date { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ann.is-today .ann-date span { color: inherit; opacity: .85; }
+.ann.is-past { opacity: .62; }
+.ann-body { display: grid; gap: 3px; min-width: 0; }
+.ann-top { display: flex; flex-wrap: wrap; gap: 5px; }
+.when-pill, .imp-pill, .ex-pill { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.when-pill { background: var(--accent-soft); color: var(--accent); }
+.imp-pill { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+.ex-pill { background: var(--grey-soft); color: var(--muted); font-family: var(--f-mono); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+.ann-title { font-weight: 700; font-size: 1rem; line-height: 1.3; }
+.ann-meta { font-size: .8rem; color: var(--muted); }
+.ann-text { font-size: .88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ann-empty { grid-column: 1 / -1; padding: 18px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); text-align: center; }
+#ann-past-btn { justify-self: start; }
+label.check { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600; }
+label.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+@media (max-width: 640px) { .agenda { padding: 14px; border-radius: 20px; } }
+
 /* Ana düzen */
 .grid { display: grid; grid-template-columns: minmax(270px, 350px) 1fr; gap: 22px; align-items: start; padding-bottom: 96px; }
 @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
@@ -266,6 +296,16 @@ textarea { resize: vertical; min-height: 70px; }
     </div>
   </section>
 
+  <section class="agenda" aria-labelledby="ann-h">
+    <div class="agenda-head">
+      <div><h2 id="ann-h">Gündem</h2><span class="muted" id="ann-count"></span></div>
+      <button class="btn small primary" type="button" id="ann-add">+ Duyuru ekle</button>
+    </div>
+    <div class="ann-list" id="ann-list"></div>
+    <button class="btn small ghost" type="button" id="ann-past-btn" hidden></button>
+    <div class="ann-list" id="ann-past" hidden></div>
+  </section>
+
   <div class="grid">
     <aside class="shelf">
       <div class="chips" id="chips" role="group" aria-label="Duruma göre süz"></div>
@@ -334,6 +374,31 @@ textarea { resize: vertical; min-height: 70px; }
     <footer>
       <button class="btn ghost" type="button" id="f-cancel">Vazgeç</button>
       <button class="btn primary" type="submit" id="f-save">Kaydet</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="adlg">
+  <form class="form" id="aform" novalidate>
+    <header>
+      <h2 id="aform-title">Yeni duyuru</h2>
+      <button class="btn small ghost" type="button" id="a-x" aria-label="Kapat">✕</button>
+    </header>
+    <div class="body">
+      <div class="fields">
+        <label class="f full">Başlık *<input id="a-title" autocomplete="off" placeholder="örn. Cuma günü toplantı var"></label>
+        <label class="f">Tarih *<input id="a-date" type="date"></label>
+        <label class="f">Saat<input id="a-time" type="time"></label>
+        <label class="f full">Duyuru metni<textarea id="a-text" placeholder="Ne, nerede, kimler katılacak…"></textarea></label>
+        <label class="check full"><input id="a-imp" type="checkbox"> Önemli duyuru olarak işaretle</label>
+      </div>
+      <p class="err" id="a-err" hidden></p>
+    </div>
+    <footer>
+      <button class="btn danger" type="button" id="a-del" hidden>Sil</button>
+      <span style="flex:1"></span>
+      <button class="btn ghost" type="button" id="a-cancel">Vazgeç</button>
+      <button class="btn primary" type="submit" id="a-save">Yayınla</button>
     </footer>
   </form>
 </dialog>
@@ -429,8 +494,93 @@ textarea { resize: vertical; min-height: 70px; }
   });
   $("ig-input").addEventListener("input", () => $("ig-input").setCustomValidity(""));
 
+  /* ---------- gündem / duyurular ---------- */
+  const ANN_KEY = "gorev-sicili-duyurular";
+  const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+  const GUNLER = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+  const parseDay = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; };
+  const daysUntil = (s) => { const d = parseDay(s); if (!d) return null; const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d - t) / 864e5); };
+  const rel = (n) => n === 0 ? "Bugün" : n === 1 ? "Yarın" : n === -1 ? "Dün" : n > 1 ? `${n} gün sonra` : `${-n} gün önce`;
+  const ANN_EXAMPLES = [
+    { id: "ornek-duyuru-1", example: true, title: "Aylık değerlendirme toplantısı", date: addDays(2), time: "14:00", text: "Tüm ekip toplantı salonunda. Görev yeri değişiklikleri konuşulacak.", important: true },
+    { id: "ornek-duyuru-2", example: true, title: "Yeni atamalar açıklanıyor", date: addDays(7), time: "", text: "Bu dönemin atama listesi duyurulacak; listeyi Instagram hesabımızdan da paylaşacağız.", important: false }
+  ];
+  let anns = [], editingAnn = null, showPast = false;
+
+  function annLsWrite() { try { localStorage.setItem(ANN_KEY, JSON.stringify(anns)); } catch (e) {} }
+  async function saveAnn(a) {
+    if (mode === "db") { const body = JSON.parse(JSON.stringify(a)); delete body.id; await db.collection("announcements").doc(a.id).set(body); }
+    else { const i = anns.findIndex((x) => x.id === a.id); if (i >= 0) anns[i] = a; else anns.push(a); annLsWrite(); renderAnns(); }
+  }
+  async function removeAnn(id) {
+    if (mode === "db") await db.collection("announcements").doc(id).delete();
+    else { anns = anns.filter((x) => x.id !== id); annLsWrite(); renderAnns(); }
+  }
+  function annCard(a) {
+    const n = daysUntil(a.date), d = parseDay(a.date);
+    const cls = "ann" + (n === 0 ? " is-today" : "") + (n !== null && n < 0 ? " is-past" : "");
+    return `<button class="${cls}" type="button" data-ann="${esc(a.id)}">
+      <span class="ann-date">${d ? `<b>${d.getDate()}</b><span>${AYLAR[d.getMonth()]}</span>` : "<b>?</b>"}</span>
+      <span class="ann-body">
+        <span class="ann-top">${n !== null ? `<span class="when-pill">${rel(n)}</span>` : ""}${a.important ? '<span class="imp-pill">Önemli</span>' : ""}${a.example ? '<span class="ex-pill">Örnek</span>' : ""}</span>
+        <span class="ann-title">${esc(a.title)}</span>
+        <span class="ann-meta">${d ? GUNLER[d.getDay()] : ""}${a.time ? " · saat " + esc(a.time) : ""}</span>
+        ${a.text ? `<span class="ann-text">${esc(a.text)}</span>` : ""}
+      </span></button>`;
+  }
+  function renderAnns() {
+    const sorted = [...anns].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
+    const up = sorted.filter((a) => (daysUntil(a.date) ?? 0) >= 0);
+    const past = sorted.filter((a) => (daysUntil(a.date) ?? 0) < 0).reverse();
+    $("ann-count").textContent = up.length ? `${up.length} yaklaşan duyuru` : "";
+    $("ann-list").innerHTML = up.length ? up.map(annCard).join("")
+      : `<div class="ann-empty">Önümüzdeki günler için duyuru yok. <b>+ Duyuru ekle</b> ile ilkini yaz.</div>`;
+    $("ann-past-btn").hidden = !past.length;
+    $("ann-past-btn").textContent = showPast ? "Geçmiş duyuruları gizle" : `Geçmiş duyurular (${past.length})`;
+    $("ann-past").hidden = !showPast || !past.length;
+    $("ann-past").innerHTML = showPast ? past.map(annCard).join("") : "";
+  }
+  function openAnn(a) {
+    editingAnn = a || null;
+    $("aform-title").textContent = a ? "Duyuruyu düzenle" : "Yeni duyuru";
+    $("a-title").value = a?.title || ""; $("a-date").value = a?.date || addDays(1); $("a-time").value = a?.time || "";
+    $("a-text").value = a?.text || ""; $("a-imp").checked = !!a?.important;
+    $("a-err").hidden = true;
+    const del = $("a-del"); del.hidden = !a; del.classList.remove("sure"); del.textContent = "Sil"; del.disabled = false;
+    $("a-save").textContent = a ? "Kaydet" : "Yayınla";
+    $("adlg").showModal(); $("a-title").focus();
+  }
+  $("ann-add").onclick = () => openAnn(null);
+  $("a-x").onclick = () => $("adlg").close();
+  $("a-cancel").onclick = () => $("adlg").close();
+  $("ann-past-btn").onclick = () => { showPast = !showPast; renderAnns(); };
+  const annClick = (e) => { const b = e.target.closest("[data-ann]"); if (b) openAnn(anns.find((x) => x.id === b.dataset.ann)); };
+  $("ann-list").addEventListener("click", annClick);
+  $("ann-past").addEventListener("click", annClick);
+  $("a-del").onclick = async () => {
+    const del = $("a-del");
+    if (!del.classList.contains("sure")) { del.classList.add("sure"); del.textContent = "Emin misin? Sil"; return; }
+    del.disabled = true;
+    try { await removeAnn(editingAnn.id); $("adlg").close(); } catch (e) { del.disabled = false; del.textContent = "Silinemedi"; }
+  };
+  $("aform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("a-title").value.trim(), date = $("a-date").value;
+    if (!title || !parseDay(date)) { $("a-err").textContent = !title ? "Başlık boş olamaz." : "Bir tarih seç."; $("a-err").hidden = false; return; }
+    const a = { id: editingAnn ? editingAnn.id : "d" + newId().slice(1), title, date, time: $("a-time").value, text: $("a-text").value.trim(), important: $("a-imp").checked, updatedAt: new Date().toISOString() };
+    const btn = $("a-save"); btn.disabled = true;
+    try { await saveAnn(a); $("adlg").close(); renderAnns(); }
+    catch (err) { $("a-err").textContent = err && err.code === "invalid_argument" ? "Bu sayfaya duyuru ekleme iznin yok." : "Kaydedilemedi, tekrar dene."; $("a-err").hidden = false; }
+    finally { btn.disabled = false; }
+  });
+
   function startLocal(note) {
     mode = "local";
+    try { const t = localStorage.getItem(ANN_KEY); anns = t ? JSON.parse(t) : null; } catch (e) { anns = null; }
+    if (!anns) { anns = ANN_EXAMPLES.map((a) => ({ ...a })); annLsWrite(); }
+    renderAnns();
     try { siteIg = localStorage.getItem(IG_KEY) || ""; } catch (e) { siteIg = ""; }
     renderIg();
     const saved = lsRead();
@@ -446,6 +596,7 @@ textarea { resize: vertical; min-height: 70px; }
     if (!ns) { startLocal(); return; }
     db = ns; mode = "db";
     db.doc("settings/site").onSnapshot((d) => { siteIg = (d.exists && d.data().instagram) || ""; renderIg(); }, () => {});
+    db.collection("announcements").onSnapshot((snap) => { anns = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderAnns(); }, () => {});
     const timer = setTimeout(() => { $("notice").textContent = "Kayıtlara henüz ulaşılamadı, bağlantı bekleniyor…"; }, 10000);
     db.collection("people").onSnapshot((snap) => {
       people = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -640,6 +791,7 @@ textarea { resize: vertical; min-height: 70px; }
 
   render();
   renderIg();
+  renderAnns();
   if (window.claude && window.claude.use) startDb(); else startLocal();
 })();
 </script>
