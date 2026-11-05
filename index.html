@@ -310,7 +310,9 @@ label.check input { width: 17px; height: 17px; accent-color: var(--ink); }
 
 /* Haber sayfası */
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding-bottom: 4px; }
-.page-head h1::after { content: "."; color: var(--brand); }
+.page-head h1::after, .page-head.sub h2::after { content: "."; color: var(--brand); }
+.page-head.sub { margin-top: 10px; padding-top: 22px; border-top: 1px solid var(--line); }
+.page-head.sub h2 { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.7rem, 4.2vw, 2.4rem); letter-spacing: -.05em; line-height: 1; margin: 0 0 6px; }
 .page-head h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(2.2rem, 5.5vw, 3.4rem); letter-spacing: -.055em; line-height: .95; margin: 0 0 6px; }
 .page-head .muted { font-family: var(--f-mono); font-size: .76rem; }
 .kicker svg { color: var(--brand); }
@@ -791,15 +793,27 @@ body:not(.is-admin) .admin-only { display: none !important; }
     return `<button class="news-hero" type="button" data-id="${esc(a.id)}">
       ${ph.length ? `<span class="nimg-wrap"><img class="hero-img" src="${esc(fullSrc(ph[0]))}" alt="" loading="lazy">${ph.length > 1 ? `<span class="pcount">${I.image}${ph.length}</span>` : ""}</span>` : ""}
       <span class="hero-body">
-        <span class="kicker"><span class="tag">${TYPES[typeOf(a)]}</span>${esc(shortDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</span>
+        <span class="kicker">${I.haber}${esc(shortDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</span>
         <h2>${esc(a.title)}</h2>${a.text ? `<p>${esc(a.text)}</p>` : ""}<span class="read">Devamını oku →</span>
       </span></button>`;
   }
+  // Gündem sayfası: önce gündem yazıları, altında ayrı "Haberler" bölümü
   function gundemFeed() {
-    const all = posts();
-    const head = `<div class="page-head"><div><h1>Gündem</h1><span class="muted">${all.length ? all.length + " yazı" : ""}</span></div>
-      <button class="btn primary admin-only" type="button" data-nav="gundem-yaz">${I.pen}Gündeme yaz</button></div>`;
-    return head + (all.length ? `<div class="feed">${all.map(feedCard).join("")}</div>` : `<section class="panel">${emptyBox(query ? "Aramaya uyan yazı yok." : "Henüz gündem yazısı yok.")}</section>`);
+    const g = items.filter((a) => typeOf(a) === "gundem" && matches(a)).sort(byAdded);
+    const h = news();
+    const admin = document.body.classList.contains("is-admin");
+    let out = "";
+    if (g.length || admin) {
+      out += `<div class="page-head"><div><h1>Gündem</h1><span class="muted">${g.length ? g.length + " yazı" : ""}</span></div>
+        <button class="btn primary admin-only" type="button" data-nav="gundem-yaz">${I.pen}Gündeme yaz</button></div>`;
+      out += g.length ? `<div class="feed">${g.map(feedCard).join("")}</div>` : `<section class="panel">${emptyBox("Henüz gündem yazısı yok. Gündeme yaz ile ilkini ekle.")}</section>`;
+    }
+    if (h.length) {
+      out += `<div class="page-head sub"><div><h2>Haberler</h2><span class="muted">${h.length} haber</span></div>
+        ${h.length > 6 ? `<button class="linkbtn" type="button" data-go="haberler">Tüm haberler →</button>` : ""}</div>
+        <div class="cards">${h.slice(0, 6).map(card).join("")}</div>`;
+    }
+    return out || `<section class="panel">${emptyBox(query ? "Aramaya uyan paylaşım yok." : "Henüz paylaşım yok.")}</section>`;
   }
 
   /* ---------- haber sayfaları ---------- */
