@@ -386,6 +386,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
 .setup b { color: var(--ink); }
 .install { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin-top: 18px; flex-wrap: wrap; }
 .install span { flex: 1 1 200px; font-size: .9rem; }
+.toast { position: fixed; left: 50%; translate: -50% 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 40; background: var(--inv); color: var(--inv-ink); padding: 10px 16px; border-radius: 12px; font-size: .9rem; box-shadow: var(--shadow); max-width: calc(100vw - 32px); text-align: center; }
 </style>
 
 <header class="topbar">
@@ -519,6 +520,18 @@ body:not(.is-admin) .admin-only { display: none !important; }
   </form>
 </dialog>
 
+<dialog id="tdlg">
+  <form class="form" id="tform" novalidate>
+    <header><h2>Yönetici girişi</h2><button class="btn small ghost" type="button" data-close aria-label="Kapat">✕</button></header>
+    <div class="body">
+      <p class="muted" style="margin:0">GitHub'dan aldığın yönetici anahtarını yapıştır. Anahtar sadece bu cihazda saklanır; kimseyle paylaşma.</p>
+      <label class="f">Yönetici anahtarı<input id="t-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…"></label>
+      <p class="err" id="t-err" hidden></p>
+    </div>
+    <footer><span style="flex:1"></span><button class="btn primary" type="submit" id="t-go">Giriş yap</button></footer>
+  </form>
+</dialog>
+
 <!-- Tam ekran fotoğraf -->
 <dialog id="lb" class="lb" aria-label="Fotoğraf">
   <div class="lb-inner">
@@ -580,7 +593,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
   const TABS = ["gundem", "etkinlikler", "duyurular", "haberler"];
   let route = { page: "tab", tab: "gundem" }, editorKey = null, assets = null, ed = null, lbList = [], lbIdx = 0;
   const photosOf = (a) => Array.isArray(a.photos) && a.photos.length ? a.photos : (a.image ? [{ data: a.image }] : []);
-  const srcOf = (p) => p.thumb || p.data || p.tmp || "";
+  const srcOf = (p) => { const s = p.thumb || p.data || p.tmp || ""; return (window.__localImg && window.__localImg[s]) || s; };
   const photoCache = {}, photoPending = new Set();
   let paintQueued = false;
   function repaint() {
@@ -588,7 +601,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
     requestAnimationFrame(() => { paintQueued = false; if (route.page === "edit") { if (ed && $("n-thumbs")) renderThumbs(); } else render(); if ($("lb").open) showLb(); });
   }
   function fullSrc(p) {
-    if (!p.pid || mode !== "fb") return srcOf(p);
+    if (!p.pid || mode !== "fb") { const f = p.data || ""; return (window.__localImg && window.__localImg[f]) || f || srcOf(p); }
     if (photoCache[p.pid]) return photoCache[p.pid];
     if (!photoPending.has(p.pid)) {
       photoPending.add(p.pid);
@@ -607,10 +620,12 @@ body:not(.is-admin) .admin-only { display: none !important; }
   /* ---------- kayıt ---------- */
   function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (e) {} }
   async function saveItem(a) {
+    if (mode === "gh") { const prev = items.slice(); const i = items.findIndex((x) => x.id === a.id); if (i >= 0) items[i] = a; else items.push(a); try { await ghSaveData((i >= 0 ? "Güncellendi: " : "Eklendi: ") + a.title); } catch (e) { items = prev; throw e; } render(); toast("Kaydedildi. Herkese 1-2 dakika içinde görünür."); return; }
     if (mode === "fb") { const body = JSON.parse(JSON.stringify(a)); delete body.id; await fs.collection("items").doc(a.id).set(body); }
     else { const i = items.findIndex((x) => x.id === a.id); if (i >= 0) items[i] = a; else items.push(a); lsWrite(); render(); }
   }
   async function removeItem(id) {
+    if (mode === "gh") { const prev = items.slice(); const a = items.find((x) => x.id === id); items = items.filter((x) => x.id !== id); try { await ghSaveData("Silindi: " + (a ? a.title : id)); } catch (e) { items = prev; throw e; } if (a) for (const p of photosOf(a)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/")) await ghDel(f, "Fotoğraf silindi").catch(() => {}); render(); toast("Silindi. Herkese 1-2 dakika içinde yansır."); return; }
     if (mode === "fb") await fs.collection("items").doc(id).delete();
     else { items = items.filter((x) => x.id !== id); lsWrite(); render(); }
   }
@@ -640,6 +655,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
     $("ig-input").setCustomValidity("");
     try {
       if (mode === "fb") await fs.collection("settings").doc("site").set({ instagram: h });
+      else if (mode === "gh") { const old = siteIg; siteIg = h; try { await ghSaveData("Instagram güncellendi"); } catch (e) { siteIg = old; throw e; } }
       else { try { localStorage.setItem(IG_KEY, h); } catch (err) {} }
       siteIg = h; closeIgForm(); renderIg();
     } catch (err) { $("ig-input").setCustomValidity("Kaydedilemedi, tekrar dene."); $("ig-input").reportValidity(); }
@@ -883,16 +899,25 @@ body:not(.is-admin) .admin-only { display: none !important; }
       const photos = [];
       for (const p of ed.photos) {
         if (p.pid) { photos.push({ pid: p.pid, thumb: p.thumb || "" }); continue; }
+        if (typeof p.data === "string" && p.data.startsWith("photos/")) { photos.push({ data: p.data, thumb: p.thumb || p.data }); continue; }
         if (!p.data) continue;
         if (mode === "fb") {
           const ref = await fs.collection("photos").add({ data: p.data, createdAt: new Date().toISOString() });
           photoCache[ref.id] = p.data; p.pid = ref.id;
           photos.push({ pid: ref.id, thumb: p.thumb || "" });
+        } else if (mode === "gh") {
+          const base = "photos/" + (ed.id || "haber") + "-" + Date.now().toString(36) + "-" + photos.length;
+          await ghPut(base + ".jpg", p.data.split(",")[1], "Fotoğraf yüklendi");
+          await ghPut(base + "-k.jpg", (p.thumb || p.data).split(",")[1], "Küçük fotoğraf yüklendi");
+          window.__localImg[base + ".jpg"] = p.data; window.__localImg[base + "-k.jpg"] = p.thumb || p.data;
+          p.data = base + ".jpg"; p.thumb = base + "-k.jpg";
+          photos.push({ data: p.data, thumb: p.thumb });
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
       const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
+      if (mode === "gh" && ed.orig) { const keep = new Set(photos.flatMap((p) => [p.data, p.thumb])); for (const p of photosOf(ed.orig)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/") && !keep.has(f)) await ghDel(f, "Fotoğraf silindi").catch(() => {}); }
       if (mode === "fb" && ed.orig) {
         const keep = new Set(photos.map((p) => p.pid).filter(Boolean));
         photosOf(ed.orig).forEach((p) => { if (p.pid && !keep.has(p.pid)) fs.collection("photos").doc(p.pid).delete().catch(() => {}); });
@@ -1154,8 +1179,43 @@ body:not(.is-admin) .admin-only { display: none !important; }
   route = parseHash(location.hash.slice(1));
   renderIg(); render();
   const CFG = window.FIREBASE_CONFIG;
+  /* GitHub ile yönetim */
+  const GH = { owner: "zaferpartisihaber", repo: "zaferpartisihaber.github.io", branch: "main" };
+  let ghToken = ""; try { ghToken = localStorage.getItem("gp-gh-token") || ""; } catch (e) {}
+  window.__localImg = {};
+  function toast(msg) { let t = $("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 4500); }
+  function utf8ToB64(str) { const b = new TextEncoder().encode(str); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
+  function b64ToUtf8(b64) { const bin = atob(String(b64).replace(/\n/g, "")); return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))); }
+  async function gh(path, opts = {}) {
+    const r = await fetch("https://api.github.com/repos/" + GH.owner + "/" + GH.repo + (path ? "/" + path : ""), { ...opts, headers: { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json", ...(opts.headers || {}) } });
+    if (!r.ok) { const e = new Error("gh " + r.status); e.status = r.status; throw e; }
+    return r.status === 204 ? null : r.json();
+  }
+  async function ghGetFile(path) { try { return await gh("contents/" + path + "?ref=" + GH.branch); } catch (e) { if (e.status === 404) return null; throw e; } }
+  async function ghPut(path, b64, message) { const cur = await ghGetFile(path); return gh("contents/" + path, { method: "PUT", body: JSON.stringify({ message, content: b64, branch: GH.branch, ...(cur ? { sha: cur.sha } : {}) }) }); }
+  async function ghDel(path, message) { const cur = await ghGetFile(path); if (!cur) return; return gh("contents/" + path, { method: "DELETE", body: JSON.stringify({ message, sha: cur.sha, branch: GH.branch }) }); }
+  async function ghSaveData(message) { await ghPut("data.json", utf8ToB64(JSON.stringify({ instagram: siteIg, items }, null, 2) + "\n"), message); }
+  async function enterGh() {
+    const repo = await gh("");
+    if (!repo.permissions || !repo.permissions.push) throw new Error("no-push");
+    const f = await ghGetFile("data.json");
+    if (f) { const d = JSON.parse(b64ToUtf8(f.content)); items = Array.isArray(d.items) ? d.items : []; siteIg = d.instagram || ""; }
+    mode = "gh"; setAdmin({ email: "" }); $("who").textContent = "Yönetici modu açık"; renderIg(); render();
+  }
+  function openTok() { $("t-err").hidden = true; $("tdlg").showModal(); $("t-key").focus(); }
+  $("tform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const k = $("t-key").value.trim(); if (!k) return;
+    const btn = $("t-go"); btn.disabled = true; ghToken = k;
+    try { await enterGh(); try { localStorage.setItem("gp-gh-token", k); } catch (er) {} $("tdlg").close(); $("t-key").value = ""; toast("Yönetici modu açıldı. Artık ekleyip düzenleyebilirsin."); }
+    catch (er) { ghToken = ""; $("t-err").textContent = er.message === "no-push" ? "Bu anahtarın siteye yazma izni yok." : "Anahtar geçersiz ya da süresi dolmuş."; $("t-err").hidden = false; }
+    finally { btn.disabled = false; }
+  });
+
   async function startStatic() {
-    mode = "static"; setAdmin(null); $("login-btn").hidden = true;
+    mode = "static"; setAdmin(null);
+    $("login-btn").hidden = false; $("login-btn").onclick = openTok;
+    $("logout-btn").onclick = () => { try { localStorage.removeItem("gp-gh-token"); } catch (e) {} ghToken = ""; mode = "static"; setAdmin(null); $("login-btn").hidden = false; $("who").textContent = ""; render(); toast("Çıkış yapıldı."); };
     $("notice").textContent = "Yükleniyor…";
     try {
       const r = await fetch("data.json?v=" + Date.now(), { cache: "no-store" });
@@ -1164,6 +1224,7 @@ body:not(.is-admin) .admin-only { display: none !important; }
       $("notice").textContent = "Zafer Partisi · Gündem";
     } catch (e) { items = []; $("notice").textContent = "Kayıtlar yüklenemedi; internet bağlantını kontrol et."; }
     loaded = true; renderIg(); render();
+    if (ghToken) { try { await enterGh(); } catch (e) { if (e.status === 401) { try { localStorage.removeItem("gp-gh-token"); } catch (er) {} ghToken = ""; } } }
   }
   if (CFG && CFG.apiKey && window.firebase) startFirebase(CFG);
   else startStatic();
