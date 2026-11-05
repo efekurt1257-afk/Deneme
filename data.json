@@ -7,7 +7,26 @@
       "title": "IŞIL ÖYKÜ DİNÇ",
       "date": "2026-11-27",
       "text": "27 KASIM CUMA GÜNÜ\n10:30\nKARTAL ANADOLU ADLİYESİ\n56. ASLİYE CEZA MAHKEMESİ",
-      "photos": [{ "data": "photos/isil-oyku-dinc.jpg", "thumb": "photos/isil-oyku-dinc-k.jpg" }]
+      "photos": [
+        {
+          "data": "photos/isil-oyku-dinc.jpg",
+          "thumb": "photos/isil-oyku-dinc-k.jpg"
+        }
+      ]
+    },
+    {
+      "id": "gmw3duw2gsyxzw",
+      "type": "haber",
+      "title": "\"Kıbrıs Fatihi\" Bülent Ecevit dönümünde saygı ve rahmetle anıyoruz. Siyasette dürüstlüğü ve nezaketi, dış politikada ise Türkiye'nin bağımsızlığını ve milli çıkarlarını önceleyen duruşuyla hafızalarımızda her daim hatırlanacak.",
+      "date": "2026-11-05",
+      "text": "\"Kıbrıs Fatihi\" Bülent Ecevit'i, vefatının yıl dönümünde saygı ve rahmetle anıyoruz.\nSiyasette dürüstlüğü ve nezaketi, dış politikada ise Türkiye'nin bağımsızlığını ve milli çıkarlarını önceleyen duruşuyla hafızalarımızda her daim hatırlanacak.",
+      "photos": [
+        {
+          "data": "photos/haber-mw3dut1s-0.jpg",
+          "thumb": "photos/haber-mw3dut1s-0-k.jpg"
+        }
+      ],
+      "updatedAt": "2026-11-05T10:08:39.640Z"
     }
   ]
 }
