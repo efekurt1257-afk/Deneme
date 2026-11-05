@@ -124,7 +124,7 @@ rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { 
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
       const now = new Date().toISOString();
-      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
+      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, videos: await saveVideos(), createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "fb" && ed.orig) {
@@ -132,7 +132,7 @@ rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { 
         photosOf(ed.orig).forEach((p) => { if (p.pid && !keep.has(p.pid)) fs.collection("photos").doc(p.pid).delete().catch(() => {}); });
       }''')
 rep('''      fail(err && err.code === "invalid_argument" ? "Bu sayfaya haber ekleme iznin yok." : err && err.code === "quota_exceeded" ? "Kayıt alanı doldu; eski kayıtları silip tekrar dene." : "Kaydedilemedi, tekrar dene.");''',
-    '''      fail(err && err.message === "too-big" ? "Bu haberde çok fazla fotoğraf var; birkaçını çıkarıp tekrar dene." : err && err.code === "permission-denied" ? "Kaydetme iznin yok; yönetici olarak giriş yaptığından emin ol." : "Kaydedilemedi, internet bağlantını kontrol edip tekrar dene.");''')
+    '''      fail(err && err.message === "video" ? "Video yüklenemedi. Yönetici girişi yaptığından emin ol ya da daha küçük bir video dene." : err && err.message === "too-big" ? "Bu haberde çok fazla fotoğraf var; birkaçını çıkarıp tekrar dene." : err && err.code === "permission-denied" ? "Kaydetme iznin yok; yönetici olarak giriş yaptığından emin ol." : "Kaydedilemedi, internet bağlantını kontrol edip tekrar dene.");''')
 rep('''        if (assets) photosOf(a).forEach((p) => { if (p.asset) assets.delete(p.asset).catch(() => {}); });''',
     '''        if (mode === "fb") photosOf(a).forEach((p) => { if (p.pid) fs.collection("photos").doc(p.pid).delete().catch(() => {}); });''')
 rep('''err && err.code === "invalid_argument" ? "Bu sayfaya kayıt ekleme iznin yok." : err && err.code === "quota_exceeded" ? "Kayıt alanı doldu; eski kayıtları silip tekrar dene." : "Kaydedilemedi, tekrar dene.";''',
@@ -281,7 +281,7 @@ rep('    if (!p.pid || mode !== "fb") return srcOf(p);',
 rep('  async function saveItem(a) {\n',
     '  async function saveItem(a) {\n    if (mode === "gh") { const prev = items.slice(); const i = items.findIndex((x) => x.id === a.id); if (i >= 0) items[i] = a; else items.push(a); try { await ghSaveData((i >= 0 ? "Güncellendi: " : "Eklendi: ") + a.title); } catch (e) { items = prev; throw e; } render(); toast("Kaydedildi. Herkese 1-2 dakika içinde görünür."); return; }\n')
 rep('  async function removeItem(id) {\n',
-    '  async function removeItem(id) {\n    if (mode === "gh") { const prev = items.slice(); const a = items.find((x) => x.id === id); items = items.filter((x) => x.id !== id); try { await ghSaveData("Silindi: " + (a ? a.title : id)); } catch (e) { items = prev; throw e; } if (a) for (const p of photosOf(a)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/")) await ghDel(f, "Fotoğraf silindi").catch(() => {}); render(); toast("Silindi. Herkese 1-2 dakika içinde yansır."); return; }\n')
+    '  async function removeItem(id) {\n    if (mode === "gh") { const prev = items.slice(); const a = items.find((x) => x.id === id); items = items.filter((x) => x.id !== id); try { await ghSaveData("Silindi: " + (a ? a.title : id)); } catch (e) { items = prev; throw e; } if (a) for (const p of photosOf(a)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/")) await ghDel(f, "Fotoğraf silindi").catch(() => {}); if (a && Array.isArray(a.videos)) for (const v of a.videos) if (v.src && v.src.startsWith("videos/")) await ghDel(v.src, "Video silindi").catch(() => {}); render(); toast("Silindi. Herkese 1-2 dakika içinde yansır."); return; }\n')
 rep('if (mode === "fb") await fs.collection("settings").doc("site").set({ instagram: h });',
     'if (mode === "fb") await fs.collection("settings").doc("site").set({ instagram: h });\n      else if (mode === "gh") { const old = siteIg; siteIg = h; try { await ghSaveData("Instagram güncellendi"); } catch (e) { siteIg = old; throw e; } }')
 rep('        if (p.pid) { photos.push({ pid: p.pid, thumb: p.thumb || "" }); continue; }',
@@ -296,7 +296,7 @@ rep('        } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.d
           photos.push({ data: p.data, thumb: p.thumb });
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });""")
 rep('      if (mode === "fb" && ed.orig) {',
-    '      if (mode === "gh" && ed.orig) { const keep = new Set(photos.flatMap((p) => [p.data, p.thumb])); for (const p of photosOf(ed.orig)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/") && !keep.has(f)) await ghDel(f, "Fotoğraf silindi").catch(() => {}); }\n      if (mode === "fb" && ed.orig) {')
+    '      if (mode === "gh" && ed.orig) { const keep = new Set(photos.flatMap((p) => [p.data, p.thumb])); for (const p of photosOf(ed.orig)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/") && !keep.has(f)) await ghDel(f, "Fotoğraf silindi").catch(() => {}); }\n      if (mode === "gh" && ed.orig && Array.isArray(ed.orig.videos)) { const kv = new Set((a.videos || []).map((v) => v.src)); for (const v of ed.orig.videos) if (v.src && v.src.startsWith("videos/") && !kv.has(v.src)) await ghDel(v.src, "Video silindi").catch(() => {}); }\n      if (mode === "fb" && ed.orig) {')
 rep('</style>', """.toast { position: fixed; left: 50%; translate: -50% 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 40; background: var(--inv); color: var(--inv-ink); padding: 10px 16px; border-radius: 12px; font-size: .9rem; box-shadow: var(--shadow); max-width: calc(100vw - 32px); text-align: center; }
 </style>""")
 rep('<!-- Tam ekran fotoğraf -->', """<dialog id="tdlg">
