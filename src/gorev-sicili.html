@@ -625,7 +625,9 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   const ofType = (t) => items.filter((a) => typeOf(a) === t && matches(a));
   const upcoming = (t) => ofType(t).filter((a) => (daysUntil(a.date) ?? 0) >= 0).sort(byAsc);
   const past = (t) => ofType(t).filter((a) => (daysUntil(a.date) ?? 0) < 0).sort(byAsc).reverse();
-  const news = () => ofType("haber").sort(byAsc).reverse();
+  // En son eklenen en üstte; eklenme zamanı olmayan eski kayıtlar tarihe göre altta
+  const addedAt = (a) => a.createdAt || a.updatedAt || "";
+  const news = () => ofType("haber").sort((x, y) => addedAt(y).localeCompare(addedAt(x)) || (y.date || "").localeCompare(x.date || ""));
 
   function panel(t, title, sub, body, extra = "") {
     return `<section class="panel"><div class="panel-head"><h2><span class="ico ${t}">${I[t]}</span>${title}</h2>${sub}</div>${body}${extra}</section>`;

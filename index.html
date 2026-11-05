@@ -708,7 +708,9 @@ body:not(.is-admin) .admin-only { display: none !important; }
   const ofType = (t) => items.filter((a) => typeOf(a) === t && matches(a));
   const upcoming = (t) => ofType(t).filter((a) => (daysUntil(a.date) ?? 0) >= 0).sort(byAsc);
   const past = (t) => ofType(t).filter((a) => (daysUntil(a.date) ?? 0) < 0).sort(byAsc).reverse();
-  const news = () => ofType("haber").sort(byAsc).reverse();
+  // En son eklenen en üstte; eklenme zamanı olmayan eski kayıtlar tarihe göre altta
+  const addedAt = (a) => a.createdAt || a.updatedAt || "";
+  const news = () => ofType("haber").sort((x, y) => addedAt(y).localeCompare(addedAt(x)) || (y.date || "").localeCompare(x.date || ""));
 
   function panel(t, title, sub, body, extra = "") {
     return `<section class="panel"><div class="panel-head"><h2><span class="ico ${t}">${I[t]}</span>${title}</h2>${sub}</div>${body}${extra}</section>`;
@@ -940,7 +942,8 @@ body:not(.is-admin) .admin-only { display: none !important; }
           photos.push({ data: p.data, thumb: p.thumb });
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
-      const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
+      const now = new Date().toISOString();
+      const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "gh" && ed.orig) { const keep = new Set(photos.flatMap((p) => [p.data, p.thumb])); for (const p of photosOf(ed.orig)) for (const f of [p.data, p.thumb]) if (f && f.startsWith("photos/") && !keep.has(f)) await ghDel(f, "Fotoğraf silindi").catch(() => {}); }
@@ -1246,6 +1249,18 @@ body:not(.is-admin) .admin-only { display: none !important; }
     loaded = true; renderIg(); render();
     if (ghToken) { try { await enterGh(); } catch (e) { if (e.status === 401) { try { localStorage.removeItem("gp-gh-token"); } catch (er) {} ghToken = ""; } } }
   }
+  // Ziyaretçide site kendini güncel tutar: her dakika ve uygulamaya geri dönülünce yeni kayıtlar gelir
+  async function refreshStatic() {
+    if (mode !== "static" || document.hidden || route.page === "edit" || document.querySelector("dialog[open]")) return;
+    try {
+      const r = await fetch("data.json?v=" + Date.now(), { cache: "no-store" });
+      const d = await r.json(); const next = Array.isArray(d.items) ? d.items : [];
+      if (JSON.stringify(next) !== JSON.stringify(items) || (d.instagram || "") !== siteIg) { items = next; siteIg = d.instagram || ""; renderIg(); render(); }
+    } catch (e) {}
+  }
+  setInterval(refreshStatic, 60000);
+  document.addEventListener("visibilitychange", refreshStatic);
+  window.addEventListener("focus", refreshStatic);
   if (CFG && CFG.apiKey && window.firebase) startFirebase(CFG);
   else startStatic();
 })();

@@ -123,7 +123,8 @@ rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { 
           photos.push({ pid: ref.id, thumb: p.thumb || "" });
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
-      const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
+      const now = new Date().toISOString();
+      const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "fb" && ed.orig) {
@@ -238,6 +239,18 @@ rep('  if (window.claude && window.claude.use) startDb(); else startLocal();',
     loaded = true; renderIg(); render();
     if (ghToken) { try { await enterGh(); } catch (e) { if (e.status === 401) { try { localStorage.removeItem("gp-gh-token"); } catch (er) {} ghToken = ""; } } }
   }
+  // Ziyaretçide site kendini güncel tutar: her dakika ve uygulamaya geri dönülünce yeni kayıtlar gelir
+  async function refreshStatic() {
+    if (mode !== "static" || document.hidden || route.page === "edit" || document.querySelector("dialog[open]")) return;
+    try {
+      const r = await fetch("data.json?v=" + Date.now(), { cache: "no-store" });
+      const d = await r.json(); const next = Array.isArray(d.items) ? d.items : [];
+      if (JSON.stringify(next) !== JSON.stringify(items) || (d.instagram || "") !== siteIg) { items = next; siteIg = d.instagram || ""; renderIg(); render(); }
+    } catch (e) {}
+  }
+  setInterval(refreshStatic, 60000);
+  document.addEventListener("visibilitychange", refreshStatic);
+  window.addEventListener("focus", refreshStatic);
   if (CFG && CFG.apiKey && window.firebase) startFirebase(CFG);
   else startStatic();''')
 rep('''let db = null, mode = "local"''', '''let mode = "local"''')
