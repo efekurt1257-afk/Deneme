@@ -664,7 +664,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       <span class="eyebrow">Bugün</span>
       <div><div class="td-date">${now.getDate()} ${AYLAR_UZUN[now.getMonth()]}</div><div class="td-sub">${GUNLER[now.getDay()]}, ${now.getFullYear()}</div></div>
       ${todays.length ? `<div class="td-list">${todays.map((a) => `<button class="td-item" type="button" data-id="${esc(a.id)}"><span class="mono">${a.time ? esc(a.time) : "Gün boyu"}</span><span class="td-t">${esc(a.title)}</span><span class="tag">${TYPES[typeOf(a)]}</span></button>`).join("")}</div>`
-        : `<p class="td-none">Bugün için bir duyuru yok.</p>`}
+        : ""}
     </div>`;
     const right = next
       ? `<button class="next" type="button" data-id="${esc(next.id)}">
