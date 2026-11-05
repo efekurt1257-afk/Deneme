@@ -1,7 +1,7 @@
 {
-  "name": "Gündem Panosu",
-  "short_name": "Gündem",
-  "description": "Etkinlikler, duyurular ve haberler",
+  "name": "Zafer Partisi",
+  "short_name": "Zafer Partisi",
+  "description": "Zafer Partisi etkinlikleri, duyuruları ve haberleri",
   "lang": "tr",
   "start_url": "./",
   "scope": "./",
