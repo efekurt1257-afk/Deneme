@@ -1,4 +1,6 @@
-# Gündem Panosu
+# Zafer Partisi · Gündem
+
+Site: https://zaferpartisihaber.github.io/
 
 Etkinlikleri, duyuruları ve haberleri tek yerde toplayan basit bir pano.
 
