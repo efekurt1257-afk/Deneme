@@ -1,13 +1,13 @@
-# Görev Sicili
+# Gündem Panosu
 
-Kişilerin tanımını, görev aldıkları yerleri ve sonunda ne olduklarını (neci olduklarını) tutan basit bir uygulama.
+Etkinlikleri, duyuruları ve haberleri tek yerde toplayan basit bir pano.
 
-- **Kişi tanımı:** ad soyad, fotoğraf, doğum yılı, memleket, kısa tanım
-- **Görev yerleri:** her görev için yer, unvan, başlangıç–bitiş ve "orada ne oldu" notu (zaman çizelgesi olarak gösterilir)
-- **Sonuç:** durum (Görevde, Terfi etti, Emekli, Ayrıldı, Vefat, Diğer), "bugün ne / neci" ve hikâyesi
-- **Gündem:** önümüzdeki günlerin duyuruları (tarih, saat, metin, önemli işareti; geçmiş duyurular ayrı)
-- **Instagram:** üstte hesabımızın Instagram adresi, her kişide de kendi Instagram alanı
-- Arama, duruma göre süzme, düzenleme ve silme
+- **Gündem:** bugünün uyarı bandı, yaklaşan etkinlikler, güncel duyurular ve son haberler bir arada
+- **Etkinlikler:** gün, başlangıç–bitiş saati, yer, açıklama, "önemli" işareti; geçmiş etkinlikler ayrı
+- **Duyurular:** günü, saati, metni, "önemli" işareti; geçmiş duyurular ayrı
+- **Haberler:** tarih, başlık, metin ve isteğe bağlı fotoğraf
+- **Instagram:** üstte hesabımızın Instagram adresi
+- Arama, düzenleme, silme; telefonda yüzen "+" butonu
 
 ## Çalıştırma
 
