@@ -102,7 +102,7 @@ rep('''          if (assets) {
           while (th.length > 45000 && tq > 0.3) { tq -= 0.1; th = small.toDataURL("image/jpeg", tq); }
           entry.data = out; entry.thumb = th;''')
 rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { data: p.data }).filter((p) => p.asset || p.data);
-    const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
+    const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
     if (mode === "db" && JSON.stringify(a).length > 240000) { fail("Fotoğraflar bu kayıt için çok büyük; birkaçını çıkarıp tekrar dene."); return; }
     const btn = $("n-save"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
     try {
@@ -124,7 +124,7 @@ rep('''    const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { 
         } else photos.push({ data: p.thumb || p.data, thumb: p.thumb || p.data });
       }
       const now = new Date().toISOString();
-      const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
+      const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, createdAt: (ed.orig && ed.orig.createdAt) || now, updatedAt: now };
       if (JSON.stringify(a).length > 900000) { throw { message: "too-big" }; }
       await saveItem(a);
       if (mode === "fb" && ed.orig) {

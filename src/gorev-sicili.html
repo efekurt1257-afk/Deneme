@@ -135,6 +135,7 @@ main { padding-bottom: 104px; display: grid; gap: 22px; }
 /* Gündem: Bugün alanı */
 .today-hero.solo { grid-template-columns: 1fr; }
 .feed { display: grid; gap: 16px; }
+.feed .kicker .tag { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 40%, transparent); }
 .feed .news-hero h2 { font-size: clamp(1.35rem, 2.8vw, 2rem); }
 .feed .news-hero:not(:has(.nimg-wrap)) { grid-template-columns: 1fr; }
 .today-hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
@@ -258,7 +259,7 @@ dialog::backdrop { background: rgba(9,9,11,.45); backdrop-filter: blur(6px); }
 .form header h2 { font-family: var(--f-display); font-weight: 600; letter-spacing: -.03em; margin: 0; font-size: 1.3rem; }
 .form .body { padding: 4px 22px 18px; display: grid; gap: 14px; overflow-y: auto; }
 .form footer { padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
-.seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; }
 .seg label { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; border-radius: 9px; font-weight: 500; font-size: .88rem; color: var(--muted); cursor: pointer; }
 .seg label svg { width: 15px; height: 15px; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -430,7 +431,8 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     <div class="body">
       <div class="seg" role="radiogroup" aria-label="Tür" id="e-type">
         <label><input type="radio" name="e-type" value="duyuru" id="e-type-duyuru"><span class="t-ico" data-icon="duyuru"></span>Duyuru</label>
-        <label><input type="radio" name="e-type" value="haber" id="e-type-haber"><span class="t-ico" data-icon="haber"></span>Gündem yazısı</label>
+        <label><input type="radio" name="e-type" value="gundem" id="e-type-gundem"><span class="t-ico" data-icon="haber"></span>Gündem</label>
+        <label><input type="radio" name="e-type" value="haber" id="e-type-haber"><span class="t-ico" data-icon="haber"></span>Haber</label>
       </div>
       <div class="fields">
         <label class="f full">Başlık *<input id="e-title" autocomplete="off" placeholder="örn. Cuma akşamı buluşma"></label>
@@ -505,8 +507,9 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   };
   document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = I[el.dataset.icon]; });
 
-  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", haber: "Haber" };
-  const TAB_TYPE = { etkinlikler: "etkinlik", duyurular: "duyuru", haberler: "haber" };
+  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", gundem: "Gündem", haber: "Haber" };
+  const isPost = (t) => t === "haber" || t === "gundem";
+  const TAB_TYPE = { etkinlikler: "etkinlik", duyurular: "duyuru", haberler: "haber", gundem: "gundem" };
 
   /* ---------- tarih yardımcıları ---------- */
   const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -536,7 +539,8 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   const photosOf = (a) => Array.isArray(a.photos) && a.photos.length ? a.photos : (a.image ? [{ data: a.image }] : []);
   const srcOf = (p) => p.asset ? "/_blob/" + p.asset : (p.data || p.tmp || "");
   function parseHash(h) {
-    if (h === "haber-yaz") return { page: "edit", id: null };
+    if (h === "haber-yaz") return { page: "edit", id: null, kind: "haber" };
+    if (h === "gundem-yaz") return { page: "edit", id: null, kind: "gundem" };
     let m = /^haber-duzenle-(.+)$/.exec(h); if (m) return { page: "edit", id: m[1] };
     m = /^haber-(.+)$/.exec(h); if (m) return { page: "article", id: m[1] };
     return { page: "tab", tab: TABS.includes(h) ? h : "gundem" };
@@ -592,15 +596,15 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   function pills(a) {
     const t = typeOf(a), n = daysUntil(a.date);
     let s = "";
-    if (t !== "haber" && n !== null && n >= -1) s += `<span class="pill when">${rel(n)}</span>`;
-    if (t !== "haber" && a.important) s += `<span class="pill imp">Önemli</span>`;
+    if (!isPost(t) && n !== null && n >= -1) s += `<span class="pill when">${rel(n)}</span>`;
+    if (!isPost(t) && a.important) s += `<span class="pill imp">Önemli</span>`;
     if (a.example) s += `<span class="pill ex">Örnek</span>`;
     return s;
   }
   function card(a) {
     const t = typeOf(a), d = parseDay(a.date), n = daysUntil(a.date);
-    const state = (t !== "haber" && n === 0 ? " is-today" : "") + (t !== "haber" && n !== null && n < 0 ? " is-past" : "");
-    if (t === "haber") {
+    const state = (!isPost(t) && n === 0 ? " is-today" : "") + (!isPost(t) && n !== null && n < 0 ? " is-past" : "");
+    if (isPost(t)) {
       const ph = photosOf(a);
       return `<button class="card news" type="button" data-id="${esc(a.id)}">
         ${ph.length ? `<span class="nimg-wrap"><img class="nimg" src="${esc(srcOf(ph[0]))}" alt="" loading="lazy">${ph.length > 1 ? `<span class="pcount">${I.image}${ph.length}</span>` : ""}</span>` : `<span class="nph">${I.haber}</span>`}
@@ -627,6 +631,8 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   const past = (t) => ofType(t).filter((a) => (daysUntil(a.date) ?? 0) < 0).sort(byAsc).reverse();
   // En son eklenen en üstte; eklenme zamanı olmayan eski kayıtlar tarihe göre altta
   const addedAt = (a) => a.createdAt || a.updatedAt || "";
+  const byAdded = (x, y) => addedAt(y).localeCompare(addedAt(x)) || (y.date || "").localeCompare(x.date || "");
+  const posts = () => items.filter((a) => isPost(typeOf(a)) && matches(a)).sort(byAdded);
   const news = () => ofType("haber").sort((x, y) => addedAt(y).localeCompare(addedAt(x)) || (y.date || "").localeCompare(x.date || ""));
 
   function panel(t, title, sub, body, extra = "") {
@@ -636,7 +642,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   const seeAll = (tabName, label) => `<button class="linkbtn" type="button" data-go="${tabName}">${label} →</button>`;
 
   function todayBanner() {
-    const todays = items.filter((a) => typeOf(a) !== "haber" && daysUntil(a.date) === 0).sort(byAsc);
+    const todays = items.filter((a) => !isPost(typeOf(a)) && daysUntil(a.date) === 0).sort(byAsc);
     if (!todays.length) return "";
     return `<div class="today-alert" role="status">${I.bell}<div><b>Bugün ${todays.length} etkinlik/duyuru var</b><ul>${todays.map((a) => `<li>${a.time ? esc(a.time) + " · " : ""}${esc(a.title)} <span style="opacity:.75">(${TYPES[typeOf(a)]})</span></li>`).join("")}</ul></div></div>`;
   }
@@ -658,7 +664,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   }
   function todayHero() {
     const now = new Date();
-    const todays = items.filter((a) => typeOf(a) !== "haber" && daysUntil(a.date) === 0 && matches(a)).sort(byAsc);
+    const todays = items.filter((a) => !isPost(typeOf(a)) && daysUntil(a.date) === 0 && matches(a)).sort(byAsc);
     const next = items.filter((a) => typeOf(a) === "etkinlik" && startOf(a) && startOf(a) > now).sort((a, b) => startOf(a) - startOf(b))[0];
     const left = `<div class="td">
       <span class="eyebrow">Bugün</span>
@@ -676,7 +682,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       : `<div class="next empty"><span class="eyebrow">Sıradaki etkinlik</span><span class="next-title" style="position:relative;z-index:1">Yaklaşan etkinlik yok</span><span class="next-meta">Yeni ekle'den bir etkinlik oluşturabilirsin.</span></div>`;
     const week = Array.from({ length: 7 }, (_, i) => {
       const ds = addDays(i), d = parseDay(ds);
-      const its = items.filter((a) => typeOf(a) !== "haber" && a.date === ds);
+      const its = items.filter((a) => !isPost(typeOf(a)) && a.date === ds);
       return `<div class="day${i === 0 ? " is-today" : ""}" title="${esc(its.map((a) => a.title).join(", "))}"><span class="dn">${GUN_KISA[d.getDay()]}</span><b>${d.getDate()}</b><span class="dots">${its.slice(0, 4).map(() => "<i></i>").join("")}</span></div>`;
     }).join("");
     return `<section class="today-hero solo">${left}</section>`;
@@ -702,14 +708,14 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     return `<button class="news-hero" type="button" data-id="${esc(a.id)}">
       ${ph.length ? `<span class="nimg-wrap"><img class="hero-img" src="${esc(fullSrc(ph[0]))}" alt="" loading="lazy">${ph.length > 1 ? `<span class="pcount">${I.image}${ph.length}</span>` : ""}</span>` : ""}
       <span class="hero-body">
-        <span class="kicker">${I.haber}${esc(shortDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</span>
+        <span class="kicker"><span class="tag">${TYPES[typeOf(a)]}</span>${esc(shortDate(a.date))}${a.example ? ' <span class="pill ex">Örnek</span>' : ""}</span>
         <h2>${esc(a.title)}</h2>${a.text ? `<p>${esc(a.text)}</p>` : ""}<span class="read">Devamını oku →</span>
       </span></button>`;
   }
   function gundemFeed() {
-    const all = news();
+    const all = posts();
     const head = `<div class="page-head"><div><h1>Gündem</h1><span class="muted">${all.length ? all.length + " yazı" : ""}</span></div>
-      <button class="btn primary admin-only" type="button" data-nav="haber-yaz">${I.pen}Gündeme yaz</button></div>`;
+      <button class="btn primary admin-only" type="button" data-nav="gundem-yaz">${I.pen}Gündeme yaz</button></div>`;
     return head + (all.length ? `<div class="feed">${all.map(feedCard).join("")}</div>` : `<section class="panel">${emptyBox(query ? "Aramaya uyan yazı yok." : "Henüz gündem yazısı yok.")}</section>`);
   }
 
@@ -730,8 +736,8 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     return head + hero + others;
   }
   function articlePage(id) {
-    const back = `<button class="btn small ghost" type="button" data-nav="haberler">← Haberler</button>`;
-    const a = items.find((x) => x.id === id && typeOf(x) === "haber");
+    const a = items.find((x) => x.id === id && isPost(typeOf(x)));
+    const back = a && typeOf(a) === "gundem" ? `<button class="btn small ghost" type="button" data-nav="gundem">← Gündem</button>` : `<button class="btn small ghost" type="button" data-nav="haberler">← Haberler</button>`;
     if (!a) return `<div class="backbar">${back}</div><section class="panel">${emptyBox(mode === "db" && !loaded ? "Haber yükleniyor…" : "Bu haber bulunamadı, silinmiş olabilir.")}</section>`;
     const ph = photosOf(a);
     const paras = (a.text || "").split(/\n+/).map((s) => s.trim()).filter(Boolean).map((s) => `<p>${esc(s)}</p>`).join("");
@@ -751,11 +757,12 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
 
   /* ---------- haber yazma sayfası ---------- */
   function editorPage(id) {
-    const a = id ? items.find((x) => x.id === id && typeOf(x) === "haber") : null;
-    ed = { id: a ? a.id : null, orig: a, photos: a ? photosOf(a).map((p) => ({ ...p })) : [], uploading: 0 };
-    $("main").innerHTML = `<div class="backbar"><button class="btn small ghost" type="button" data-nav="${a ? "haber-" + esc(a.id) : "haberler"}">← Vazgeç</button></div>
+    const a = id ? items.find((x) => x.id === id && isPost(typeOf(x))) : null;
+    const kind = a ? typeOf(a) : (route.kind || "haber");
+    ed = { id: a ? a.id : null, kind, orig: a, photos: a ? photosOf(a).map((p) => ({ ...p })) : [], uploading: 0 };
+    $("main").innerHTML = `<div class="backbar"><button class="btn small ghost" type="button" data-nav="${a ? "haber-" + esc(a.id) : (kind === "gundem" ? "gundem" : "haberler")}">← Vazgeç</button></div>
       <form class="editor" id="ned" novalidate>
-        <div class="kicker">${I.pen}${a ? "Yazıyı düzenle" : "Yeni gündem yazısı"}</div>
+        <div class="kicker">${I.pen}${a ? "Yazıyı düzenle" : (kind === "gundem" ? "Yeni gündem yazısı" : "Yeni haber")}</div>
         <input class="ed-title" id="n-title" placeholder="Başlık" autocomplete="off" aria-label="Başlık">
         <div class="ed-row"><label class="f">Tarih<input type="date" id="n-date"></label></div>
         <div class="group">
@@ -844,7 +851,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     if (!parseDay(date)) { fail("Bir tarih seç."); return; }
     if (ed.uploading) { fail("Fotoğraflar hâlâ yükleniyor, birkaç saniye bekle."); return; }
     const photos = ed.photos.map((p) => p.asset ? { asset: p.asset } : { data: p.data }).filter((p) => p.asset || p.data);
-    const a = { id: ed.id || newId(), type: "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
+    const a = { id: ed.id || newId(), type: ed.kind || "haber", title, date, text: $("n-text").value.trim(), photos, updatedAt: new Date().toISOString() };
     if (mode === "db" && JSON.stringify(a).length > 240000) { fail("Fotoğraflar bu kayıt için çok büyük; birkaçını çıkarıp tekrar dene."); return; }
     const btn = $("n-save"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
     try {
@@ -877,13 +884,13 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     tab = route.page === "tab" ? route.tab : "haberler";
     document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
     document.querySelectorAll(".bn").forEach((b) => { if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
-    const todayN = items.filter((a) => typeOf(a) !== "haber" && daysUntil(a.date) === 0);
+    const todayN = items.filter((a) => !isPost(typeOf(a)) && daysUntil(a.date) === 0);
     $("bc-an").textContent = todayN.filter((a) => typeOf(a) === "duyuru").length || "";
     $("overview").hidden = route.page !== "tab";
     $("fab").hidden = route.page !== "tab";
 
     if (route.page === "edit") {
-      const key = route.id || "yeni";
+      const key = route.id || "yeni-" + (route.kind || "haber");
       if (editorKey === key) return;                       // yazılan metin kaybolmasın
       if (route.id && !items.find((x) => x.id === route.id)) {
         $("main").innerHTML = `<div class="backbar"><button class="btn small ghost" type="button" data-nav="haberler">← Haberler</button></div><section class="panel">${emptyBox(mode === "db" && !loaded ? "Haber yükleniyor…" : "Bu haber bulunamadı.")}</section>`;
@@ -920,7 +927,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       ${a.image ? `<img class="view-img" src="${esc(a.image)}" alt="">` : ""}
       <div><div class="pills">${pills(a)}</div><h2 class="view-title">${esc(a.title)}</h2></div>
       <div class="view-meta">
-        ${a.date ? `<span class="mchip">${I.cal}${esc(longDate(a.date))}${t !== "haber" && n !== null ? ` · ${rel(n)}` : ""}</span>` : ""}
+        ${a.date ? `<span class="mchip">${I.cal}${esc(longDate(a.date))}${!isPost(t) && n !== null ? ` · ${rel(n)}` : ""}</span>` : ""}
         ${time ? `<span class="mchip">${I.clock}${time}</span>` : ""}
         ${a.place ? `<span class="mchip">${I.pin}${esc(a.place)}</span>` : ""}
       </div>
@@ -947,7 +954,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     if (!editing) $("e-title-h").textContent = "Yeni " + TYPES[t].toLocaleLowerCase("tr");
   }
   document.querySelectorAll('input[name="e-type"]').forEach((r) => r.addEventListener("change", () => {
-    if (curType() === "haber" && !editing) { $("edlg").close(); nav("haber-yaz"); return; }
+    if (isPost(curType()) && !editing) { const k = curType(); $("edlg").close(); nav(k === "gundem" ? "gundem-yaz" : "haber-yaz"); return; }
     applyType();
   }));
   function setImgPreview() {
@@ -956,7 +963,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   }
   function openForm(a, typeHint) {
     const t = a ? typeOf(a) : (typeHint || "duyuru");
-    if (t === "haber") { nav(a ? "haber-duzenle-" + a.id : "haber-yaz"); return; }
+    if (isPost(t)) { nav(a ? "haber-duzenle-" + a.id : (t === "gundem" ? "gundem-yaz" : "haber-yaz")); return; }
     editing = a || null;
     $("e-type-" + t).checked = true;
     $("e-title").value = a?.title || "";
@@ -1054,12 +1061,12 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       try {
         await removeItem(a.id);
         if (assets) photosOf(a).forEach((p) => { if (p.asset) assets.delete(p.asset).catch(() => {}); });
-        nav("haberler");
+        nav(typeOf(a) === "gundem" ? "gundem" : "haberler");
       } catch (err) { del.disabled = false; del.textContent = "Silinemedi"; }
       return;
     }
     const c = e.target.closest("#main [data-id]");
-    if (c) { const a = items.find((x) => x.id === c.dataset.id); if (!a) return; if (typeOf(a) === "haber") nav("haber-" + a.id); else openView(a); }
+    if (c) { const a = items.find((x) => x.id === c.dataset.id); if (!a) return; if (isPost(typeOf(a))) nav("haber-" + a.id); else openView(a); }
   });
   window.addEventListener("hashchange", () => {
     const prev = route.page;
