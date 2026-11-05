@@ -302,8 +302,8 @@ dialog::backdrop { background: rgba(9,9,11,.45); backdrop-filter: blur(6px); }
 @media (max-width: 560px) { .fields { grid-template-columns: 1fr; } }
 .full { grid-column: 1 / -1; }
 label.f { display: grid; gap: 5px; font-size: .8rem; font-weight: 500; color: var(--ink-2); min-width: 0; }
-label.f input, label.f textarea { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 12px; width: 100%; min-width: 0; font-weight: 400; outline: none; transition: border-color .15s, box-shadow .15s; color: var(--ink); }
-label.f input:focus, label.f textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 8%, transparent); }
+label.f input, label.f textarea, label.f select { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 12px; width: 100%; min-width: 0; font-weight: 400; outline: none; transition: border-color .15s, box-shadow .15s; color: var(--ink); }
+label.f input:focus, label.f textarea:focus, label.f select:focus { border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 8%, transparent); }
 textarea { resize: vertical; min-height: 96px; }
 label.check { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 500; }
 label.check input { width: 17px; height: 17px; accent-color: var(--ink); }
@@ -478,6 +478,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       </div>
       <div class="fields">
         <label class="f full">Ad Soyad *<input id="m-name" autocomplete="off" placeholder="örn. Ahmet Yılmaz"></label>
+        <label class="f full">Bölüm<select id="m-group"><option value="yonetim">Yönetim</option><option value="kurul">Yönetim Kurulu</option></select></label>
         <label class="f">Görevi<input id="m-role" autocomplete="off" placeholder="örn. İlçe Başkanı"></label>
         <label class="f">Sıra<input id="m-order" type="number" inputmode="numeric" min="1" placeholder="örn. 1"></label>
       </div>
@@ -1126,7 +1127,9 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   /* ---------- olaylar ---------- */
   /* ---------- Yönetim ekibi ---------- */
   const initials = (n) => (n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toLocaleUpperCase("tr");
-  const team = () => items.filter((a) => typeOf(a) === "uye" && matches(a)).sort((x, y) => ((+x.order || 999) - (+y.order || 999)) || addedAt(x).localeCompare(addedAt(y)));
+  const GROUPS = { yonetim: "Yönetim", kurul: "Yönetim Kurulu" };
+  const groupOf = (a) => GROUPS[a.group] ? a.group : "yonetim";
+  const team = (g) => items.filter((a) => typeOf(a) === "uye" && groupOf(a) === g && matches(a)).sort((x, y) => ((+x.order || 999) - (+y.order || 999)) || addedAt(x).localeCompare(addedAt(y)));
   function memberCard(a) {
     const ph = photosOf(a)[0];
     const admin = document.body.classList.contains("is-admin");
@@ -1136,10 +1139,17 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       <span class="mb"><span class="mn">${esc(a.title)}</span>${a.role ? `<span class="mr">${esc(a.role)}</span>` : ""}</span></${tag}>`;
   }
   function teamPage() {
-    const t = team();
-    return `<div class="page-head"><div><h1>Yönetim</h1><span class="muted">${t.length ? t.length + " kişi" : ""}</span></div>
-      <button class="btn primary admin-only" type="button" data-uye-add="1">${I.team}Kişi ekle</button></div>` +
+    const t = team("yonetim"), k = team("kurul");
+    const admin = document.body.classList.contains("is-admin");
+    let out = `<div class="page-head"><div><h1>Yönetim</h1><span class="muted">${t.length ? t.length + " kişi" : ""}</span></div>
+      <button class="btn primary admin-only" type="button" data-uye-add="yonetim">${I.team}Kişi ekle</button></div>` +
       (t.length ? `<div class="team">${t.map(memberCard).join("")}</div>` : `<section class="panel">${emptyBox(query ? "Aramaya uyan kişi yok." : "Yönetim ekibi henüz eklenmedi.")}</section>`);
+    if (k.length || admin) {
+      out += `<div class="page-head sub"><div><h2>Yönetim Kurulu</h2><span class="muted">${k.length ? k.length + " kişi" : ""}</span></div>
+        <button class="btn primary admin-only" type="button" data-uye-add="kurul">${I.team}Kurula kişi ekle</button></div>` +
+        (k.length ? `<div class="team">${k.map(memberCard).join("")}</div>` : `<section class="panel">${emptyBox("Yönetim kurulu henüz eklenmedi.")}</section>`);
+    }
+    return out;
   }
   let mEditing = null, mPhoto = null;
   function mPreview() {
@@ -1147,9 +1157,11 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     $("m-prev").hidden = !src; $("m-ini").hidden = !!src; if (src) $("m-prev").src = src;
     $("m-ini").textContent = initials($("m-name").value); $("m-clear").hidden = !src;
   }
-  function openMember(a) {
+  function openMember(a, group) {
     mEditing = a || null;
-    $("m-h").textContent = a ? "Kişiyi düzenle" : "Yönetim ekibine ekle";
+    const g = a ? groupOf(a) : (GROUPS[group] ? group : "yonetim");
+    $("m-group").value = g;
+    $("m-h").textContent = a ? "Kişiyi düzenle" : (g === "kurul" ? "Yönetim Kurulu'na ekle" : "Yönetim ekibine ekle");
     $("m-name").value = a?.title || ""; $("m-role").value = a?.role || ""; $("m-order").value = a?.order || "";
     mPhoto = a ? (photosOf(a)[0] || null) : null;
     $("m-err").hidden = true;
@@ -1185,7 +1197,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       }
       const now = new Date().toISOString();
       const old = mEditing ? photosOf(mEditing)[0] : null;
-      const a = { id, type: "uye", title: name, role: $("m-role").value.trim(), order: $("m-order").value ? +$("m-order").value : "", photos, createdAt: (mEditing && mEditing.createdAt) || now, updatedAt: now };
+      const a = { id, type: "uye", group: $("m-group").value, title: name, role: $("m-role").value.trim(), order: $("m-order").value ? +$("m-order").value : "", photos, createdAt: (mEditing && mEditing.createdAt) || now, updatedAt: now };
       await saveItem(a);
       if (mode === "gh" && old && typeof old.data === "string" && old.data.startsWith("photos/") && !(photos[0] && photos[0].data === old.data)) ghDel(old.data, "Eski yönetim fotoğrafı silindi").catch(() => {});
       $("mdlg").close(); render();
@@ -1200,7 +1212,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   };
   document.addEventListener("click", (e) => {
     const u = e.target.closest("#main [data-uye]"); if (u) { const a = items.find((x) => x.id === u.dataset.uye); if (a) openMember(a); return; }
-    if (e.target.closest("[data-uye-add]")) openMember(null);
+    const add = e.target.closest("[data-uye-add]"); if (add) openMember(null, add.dataset.uyeAdd);
   });
 
   /* ---------- sağ üst menü ---------- */
@@ -1226,6 +1238,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
         <button class="menu-item" type="button" role="menuitem" data-nav="haber-yaz">${MI.plus}Haber yaz</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="duyuru">${MI.plus}Duyuru ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="uye">${MI.plus}Yönetime kişi ekle</button>
+        <button class="menu-item" type="button" role="menuitem" data-menu="kurul">${MI.plus}Yönetim Kurulu'na kişi ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="logout">${MI.out}Çıkış yap</button></div>`;
     } else if ($("login-btn")) {
       h += `<div class="menu-sec"><button class="menu-item subtle" type="button" role="menuitem" data-menu="login">${MI.key}Yönetici girişi</button></div>`;
@@ -1249,7 +1262,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     if (act === "login") $("login-btn").click();
     else if (act === "logout") $("logout-btn").click();
     else if (act === "duyuru") openForm(null, "duyuru");
-    else if (act === "uye") { setTab("yonetim"); openMember(null); }
+    else if (act === "uye" || act === "kurul") { setTab("yonetim"); openMember(null, act === "kurul" ? "kurul" : "yonetim"); }
   });
   document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu") && !e.target.closest("#menu-btn")) closeMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("menu").hidden) { closeMenu(); $("menu-btn").focus(); } });
