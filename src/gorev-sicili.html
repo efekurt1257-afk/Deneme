@@ -130,6 +130,14 @@ button { cursor: pointer; }
 .ann-text { font-size: .88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .ann-empty { grid-column: 1 / -1; padding: 18px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); text-align: center; }
 #ann-past-btn { justify-self: start; }
+.today-alert { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); }
+.today-alert svg { width: 22px; height: 22px; flex: none; margin-top: 1px; }
+.today-alert b { display: block; font-family: var(--f-display); font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; }
+.today-alert ul { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .today-alert svg { animation: ring 1.6s ease-in-out 2; transform-origin: 50% 10%; }
+  @keyframes ring { 0%,100% { rotate: 0deg; } 15% { rotate: 14deg; } 30% { rotate: -12deg; } 45% { rotate: 8deg; } 60% { rotate: 0deg; } }
+}
 label.check { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600; }
 label.check input { width: 18px; height: 18px; accent-color: var(--accent); }
 @media (max-width: 640px) { .agenda { padding: 14px; border-radius: 20px; } }
@@ -293,6 +301,7 @@ textarea { resize: vertical; min-height: 70px; }
       <div><h2 id="ann-h">Gündem</h2><span class="muted" id="ann-count"></span></div>
       <button class="btn small primary" type="button" id="ann-add">+ Duyuru ekle</button>
     </div>
+    <div class="today-alert" id="ann-today" role="status" hidden></div>
     <div class="ann-list" id="ann-list"></div>
     <button class="btn small ghost" type="button" id="ann-past-btn" hidden></button>
     <div class="ann-list" id="ann-past" hidden></div>
@@ -527,6 +536,10 @@ textarea { resize: vertical; min-height: 70px; }
     const up = sorted.filter((a) => (daysUntil(a.date) ?? 0) >= 0);
     const past = sorted.filter((a) => (daysUntil(a.date) ?? 0) < 0).reverse();
     $("ann-count").textContent = up.length ? `${up.length} yaklaşan duyuru` : "";
+    const todays = up.filter((a) => daysUntil(a.date) === 0);
+    $("ann-today").hidden = !todays.length;
+    $("ann-today").innerHTML = todays.length ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <div><b>Bugün ${todays.length} duyuru var</b><ul>${todays.map((a) => `<li>${a.time ? esc(a.time) + " · " : ""}${esc(a.title)}</li>`).join("")}</ul></div>` : "";
     $("ann-list").innerHTML = up.length ? up.map(annCard).join("")
       : `<div class="ann-empty">Önümüzdeki günler için duyuru yok. <b>+ Duyuru ekle</b> ile ilkini yaz.</div>`;
     $("ann-past-btn").hidden = !past.length;
