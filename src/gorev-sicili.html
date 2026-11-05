@@ -232,6 +232,19 @@ main { padding-bottom: 104px; display: grid; gap: 22px; }
 .fab svg { width: 24px; height: 24px; }
 @media (max-width: 680px) { .fab { display: grid; } }
 
+/* Instagram hesaplarımız */
+.iglist { display: grid; gap: 10px; }
+.igrow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; flex-wrap: wrap; }
+.igrow.main { border-color: color-mix(in srgb, var(--brand-strong) 45%, transparent); box-shadow: 0 0 0 3px var(--brand-soft); }
+.igrow .igb { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; background: var(--brand-strong); color: #fff; flex: none; }
+.igrow .igb svg { width: 22px; height: 22px; }
+.igrow .igt { flex: 1 1 140px; min-width: 0; display: grid; gap: 2px; }
+.igrow .igl { font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.igrow .igh { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.igrow .igacts { display: flex; gap: 8px; align-items: center; }
+.igrow .igf { background: var(--brand-strong); color: #fff; padding: 8px 16px; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: .86rem; white-space: nowrap; }
+.igrow .igf:hover { filter: brightness(1.08); }
+
 /* Yönetim ekibi */
 .team { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
 @media (max-width: 560px) { .team { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
@@ -463,6 +476,27 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
 
 <div class="menu" id="menu" role="menu" hidden></div>
 
+<!-- Instagram hesabı ekle / düzenle -->
+<dialog id="idlg">
+  <form class="form" id="iform" novalidate>
+    <header><h2 id="i-h">Instagram hesabı ekle</h2><button class="btn small ghost" type="button" data-close aria-label="Kapat">✕</button></header>
+    <div class="body">
+      <div class="fields">
+        <label class="f full">Hesabın adı *<input id="i-label" autocomplete="off" placeholder="örn. Gençlik Kolları"></label>
+        <label class="f">Kullanıcı adı *<input id="i-handle" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@kullaniciadi ya da link"></label>
+        <label class="f">Sıra<input id="i-order" type="number" inputmode="numeric" min="1" placeholder="örn. 1"></label>
+      </div>
+      <p class="err" id="i-err" hidden></p>
+    </div>
+    <footer>
+      <button class="btn danger" type="button" id="i-del" hidden>Sil</button>
+      <span style="flex:1"></span>
+      <button class="btn ghost" type="button" data-close>Vazgeç</button>
+      <button class="btn primary" type="submit" id="i-save">Kaydet</button>
+    </footer>
+  </form>
+</dialog>
+
 <!-- Yönetim ekibi: kişi ekle / düzenle -->
 <dialog id="mdlg">
   <form class="form" id="mform" novalidate>
@@ -580,7 +614,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   };
   document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = I[el.dataset.icon]; });
 
-  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", gundem: "Gündem", haber: "Haber", uye: "Yönetim" };
+  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", gundem: "Gündem", haber: "Haber", uye: "Yönetim", ig: "Instagram" };
   const isPost = (t) => t === "haber" || t === "gundem";
   const TAB_TYPE = { etkinlikler: "etkinlik", duyurular: "duyuru", haberler: "haber", gundem: "gundem", yonetim: "uye" };
 
@@ -607,7 +641,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   let items = [], tab = "gundem", query = "", showPast = { etkinlik: false, duyuru: false };
   let db = null, mode = "local", editing = null, viewing = null, imgData = "", siteIg = "";
   const typeOf = (a) => TYPES[a.type] ? a.type : "duyuru";
-  const TABS = ["gundem", "duyurular", "haberler", "yonetim"];
+  const TABS = ["gundem", "duyurular", "haberler", "yonetim", "instagram"];
   let route = { page: "tab", tab: "gundem" }, editorKey = null, assets = null, ed = null, lbList = [], lbIdx = 0;
   const photosOf = (a) => Array.isArray(a.photos) && a.photos.length ? a.photos : (a.image ? [{ data: a.image }] : []);
   const srcOf = (p) => p.asset ? "/_blob/" + p.asset : (p.data || p.tmp || "");
@@ -995,6 +1029,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     } else if (tab === "etkinlikler") html = todayBanner() + listPanel("etkinlik");
     else if (tab === "duyurular") html = listPanel("duyuru");
     else if (tab === "yonetim") html = teamPage();
+    else if (tab === "instagram") html = igPage();
     else html = newsPage();
     $("main").innerHTML = html;
   }
@@ -1125,6 +1160,56 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   }
 
   /* ---------- olaylar ---------- */
+  /* ---------- Instagram hesaplarımız ---------- */
+  const IGI = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>';
+  const igAccounts = () => items.filter((a) => typeOf(a) === "ig" && matches(a)).sort((x, y) => ((+x.order || 999) - (+y.order || 999)) || (x.createdAt || "").localeCompare(y.createdAt || ""));
+  function igRow(label, handle, extra, main) {
+    return `<div class="igrow${main ? " main" : ""}"><span class="igb" aria-hidden="true">${IGI}</span>
+      <span class="igt"><span class="igl">${esc(label)}</span><span class="igh">@${esc(handle)}</span></span>
+      <span class="igacts">${extra || ""}<a class="igf" href="https://www.instagram.com/${encodeURIComponent(handle)}/" target="_blank" rel="noopener">Takip et</a></span></div>`;
+  }
+  function igPage() {
+    const list = igAccounts();
+    let rows = siteIg ? igRow("Ana hesabımız", siteIg, "", true) : "";
+    rows += list.map((a) => igRow(a.title, a.handle, `<button class="btn small admin-only" type="button" data-ig-edit="${esc(a.id)}">Düzenle</button>`)).join("");
+    return `<div class="page-head"><div><h1>Instagram</h1><span class="muted">${(list.length + (siteIg ? 1 : 0)) || ""} hesap</span></div>
+      <button class="btn primary admin-only" type="button" data-ig-add="1">${IGI}Hesap ekle</button></div>` +
+      (rows ? `<div class="iglist">${rows}</div>` : `<section class="panel">${emptyBox("Henüz Instagram hesabı eklenmedi.")}</section>`);
+  }
+  let igEditing = null;
+  function openIg(a) {
+    igEditing = a || null;
+    $("i-h").textContent = a ? "Instagram hesabını düzenle" : "Instagram hesabı ekle";
+    $("i-label").value = a?.title || ""; $("i-handle").value = a?.handle ? "@" + a.handle : ""; $("i-order").value = a?.order || "";
+    $("i-err").hidden = true;
+    const d = $("i-del"); d.hidden = !a; d.classList.remove("sure"); d.textContent = "Sil"; d.disabled = false;
+    $("idlg").showModal(); $("i-label").focus();
+  }
+  $("iform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const label = $("i-label").value.trim(), handle = igHandle($("i-handle").value);
+    const fail = (m) => { $("i-err").textContent = m; $("i-err").hidden = false; };
+    if (!label) { fail("Hesabın adını yaz (örn. Gençlik Kolları)."); $("i-label").focus(); return; }
+    if (!handle) { fail("Geçerli bir Instagram kullanıcı adı yaz (harf, rakam, nokta, alt çizgi)."); $("i-handle").focus(); return; }
+    const btn = $("i-save"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
+    try {
+      const now = new Date().toISOString();
+      await saveItem({ id: igEditing ? igEditing.id : newId(), type: "ig", title: label, handle, order: $("i-order").value ? +$("i-order").value : "", createdAt: (igEditing && igEditing.createdAt) || now, updatedAt: now });
+      $("idlg").close(); render();
+    } catch (er) { fail("Kaydedilemedi, internet bağlantını kontrol edip tekrar dene."); }
+    finally { btn.disabled = false; btn.textContent = "Kaydet"; }
+  });
+  $("i-del").onclick = async () => {
+    const d = $("i-del");
+    if (!d.classList.contains("sure")) { d.classList.add("sure"); d.textContent = "Emin misin? Sil"; return; }
+    d.disabled = true;
+    try { await removeItem(igEditing.id); $("idlg").close(); render(); } catch (er) { d.disabled = false; d.textContent = "Silinemedi"; }
+  };
+  document.addEventListener("click", (e) => {
+    const ed = e.target.closest("[data-ig-edit]"); if (ed) { const a = items.find((x) => x.id === ed.dataset.igEdit); if (a) openIg(a); return; }
+    if (e.target.closest("[data-ig-add]")) openIg(null);
+  });
+
   /* ---------- Yönetim ekibi ---------- */
   const initials = (n) => (n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toLocaleUpperCase("tr");
   const GROUPS = { yonetim: "Yönetim", kurul: "Yönetim Kurulu" };
@@ -1230,7 +1315,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       <button class="menu-item" type="button" role="menuitem" data-go="duyurular"${cur("duyurular")}>${I.duyuru}Duyurular</button>
       <button class="menu-item" type="button" role="menuitem" data-go="haberler"${cur("haberler")}>${I.haber}Haberler</button>
       <button class="menu-item" type="button" role="menuitem" data-go="yonetim"${cur("yonetim")}>${I.team}Yönetim</button>
-      ${siteIg ? `<a class="menu-item" role="menuitem" href="https://www.instagram.com/${encodeURIComponent(siteIg)}/" target="_blank" rel="noopener">${MI.ig}Instagram'da takip et</a>` : ""}
+      <button class="menu-item" type="button" role="menuitem" data-go="instagram"${cur("instagram")}>${MI.ig}Instagram hesaplarımız</button>
     </div>`;
     if (admin && $("logout-btn")) {
       h += `<div class="menu-sec"><div class="menu-note">Yönetim · giriş yapıldı</div>
@@ -1239,6 +1324,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
         <button class="menu-item" type="button" role="menuitem" data-menu="duyuru">${MI.plus}Duyuru ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="uye">${MI.plus}Yönetime kişi ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="kurul">${MI.plus}Yönetim Kurulu'na kişi ekle</button>
+        <button class="menu-item" type="button" role="menuitem" data-menu="igadd">${MI.plus}Instagram hesabı ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="logout">${MI.out}Çıkış yap</button></div>`;
     } else if ($("login-btn")) {
       h += `<div class="menu-sec"><button class="menu-item subtle" type="button" role="menuitem" data-menu="login">${MI.key}Yönetici girişi</button></div>`;
@@ -1262,13 +1348,14 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     if (act === "login") $("login-btn").click();
     else if (act === "logout") $("logout-btn").click();
     else if (act === "duyuru") openForm(null, "duyuru");
+    else if (act === "igadd") { setTab("instagram"); openIg(null); }
     else if (act === "uye" || act === "kurul") { setTab("yonetim"); openMember(null, act === "kurul" ? "kurul" : "yonetim"); }
   });
   document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu") && !e.target.closest("#menu-btn")) closeMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("menu").hidden) { closeMenu(); $("menu-btn").focus(); } });
   window.addEventListener("resize", closeMenu);
 
-  const addNew = () => (tab === "yonetim" && route.page === "tab") ? openMember(null) : openForm(null, TAB_TYPE[tab] || "haber");
+  const addNew = () => (route.page === "tab" && tab === "yonetim") ? openMember(null) : (route.page === "tab" && tab === "instagram") ? openIg(null) : openForm(null, TAB_TYPE[tab] || "haber");
   $("add-btn").onclick = addNew; $("fab").onclick = addNew;
   $("search").addEventListener("input", (e) => { query = e.target.value.trim().toLocaleLowerCase("tr"); render(); });
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
