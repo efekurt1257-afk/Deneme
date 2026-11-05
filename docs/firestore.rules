@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Yönetici: Firebase Authentication'da oluşturduğun hesabın e-postası.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email in ['YONETICI_EPOSTASI'];
+    }
+    match /{document=**} {
+      allow read: if true;        // herkes okuyabilir
+      allow write: if isAdmin();  // sadece yönetici yazabilir
+    }
+  }
+}
