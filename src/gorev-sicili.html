@@ -232,6 +232,22 @@ main { padding-bottom: 104px; display: grid; gap: 22px; }
 .fab svg { width: 24px; height: 24px; }
 @media (max-width: 680px) { .fab { display: grid; } }
 
+/* Yönetim ekibi */
+.team { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+@media (max-width: 560px) { .team { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+.member { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; text-align: left; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+button.member { cursor: pointer; transition: box-shadow .15s, transform .15s, border-color .15s; }
+button.member:hover { box-shadow: var(--shadow); transform: translateY(-1px); border-color: var(--line-strong); }
+.member .mph { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--surface-2); max-width: 100%; }
+.member .mini { width: 100%; aspect-ratio: 1; display: grid; place-items: center; background: var(--inv); color: var(--inv-ink); font-family: var(--f-display); font-weight: 700; font-size: 2.6rem; letter-spacing: -.04em; }
+.member .mb { padding: 12px 14px 14px; display: grid; gap: 3px; min-width: 0; }
+.member .mn { font-weight: 700; font-size: 1rem; letter-spacing: -.015em; line-height: 1.25; overflow-wrap: anywhere; }
+.member .mr { font-size: .84rem; color: var(--brand); font-weight: 600; overflow-wrap: anywhere; }
+.m-photo { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.m-photo img, .m-ini { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; flex: none; }
+.m-ini { display: grid; place-items: center; background: var(--inv); color: var(--inv-ink); font-family: var(--f-display); font-weight: 700; font-size: 2rem; }
+.menu-item.subtle { color: var(--muted); font-size: .88rem; }
+
 /* Sağ üst menü */
 .menu-btn { flex: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: grid; place-items: center; transition: background .15s, border-color .15s; }
 .menu-btn:hover, .menu-btn[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line-strong); }
@@ -253,7 +269,7 @@ main { padding-bottom: 104px; display: grid; gap: 22px; }
 .bnav { display: none; }
 @media (max-width: 680px) {
   .tabs { display: none; }
-  .bnav { display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 24;
+  .bnav { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 24;
     background: var(--glass); backdrop-filter: saturate(1.6) blur(18px); -webkit-backdrop-filter: saturate(1.6) blur(18px);
     border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 6px) max(8px, env(safe-area-inset-left, 0px)); }
   .bn { border: none; background: none; display: grid; justify-items: center; gap: 3px; padding: 6px 2px; font-size: .7rem; font-weight: 500; color: var(--muted); position: relative; }
@@ -427,6 +443,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     <button class="tab" role="tab" type="button" data-tab="gundem">Gündem</button>
     <button class="tab" role="tab" type="button" data-tab="duyurular">Duyurular <i id="tc-an"></i></button>
     <button class="tab" role="tab" type="button" data-tab="haberler">Haberler <i id="tc-news"></i></button>
+    <button class="tab" role="tab" type="button" data-tab="yonetim">Yönetim</button>
   </nav>
 
   <main id="main" aria-live="polite"></main>
@@ -441,9 +458,39 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   <button class="bn" type="button" data-tab="gundem"><span data-icon="home"></span>Gündem</button>
   <button class="bn" type="button" data-tab="duyurular"><span data-icon="duyuru"></span>Duyurular<i id="bc-an"></i></button>
   <button class="bn" type="button" data-tab="haberler"><span data-icon="haber"></span>Haberler</button>
+  <button class="bn" type="button" data-tab="yonetim"><span data-icon="team"></span>Yönetim</button>
 </nav>
 
 <div class="menu" id="menu" role="menu" hidden></div>
+
+<!-- Yönetim ekibi: kişi ekle / düzenle -->
+<dialog id="mdlg">
+  <form class="form" id="mform" novalidate>
+    <header><h2 id="m-h">Yönetim ekibine ekle</h2><button class="btn small ghost" type="button" data-close aria-label="Kapat">✕</button></header>
+    <div class="body">
+      <div class="m-photo">
+        <img id="m-prev" alt="" hidden><span id="m-ini" class="m-ini" aria-hidden="true">?</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="btn small" for="m-file">Fotoğraf seç</label>
+          <input id="m-file" type="file" accept="image/*" hidden>
+          <button class="btn small ghost" type="button" id="m-clear" hidden>Kaldır</button>
+        </div>
+      </div>
+      <div class="fields">
+        <label class="f full">Ad Soyad *<input id="m-name" autocomplete="off" placeholder="örn. Ahmet Yılmaz"></label>
+        <label class="f">Görevi<input id="m-role" autocomplete="off" placeholder="örn. İlçe Başkanı"></label>
+        <label class="f">Sıra<input id="m-order" type="number" inputmode="numeric" min="1" placeholder="örn. 1"></label>
+      </div>
+      <p class="err" id="m-err" hidden></p>
+    </div>
+    <footer>
+      <button class="btn danger" type="button" id="m-del" hidden>Sil</button>
+      <span style="flex:1"></span>
+      <button class="btn ghost" type="button" data-close>Vazgeç</button>
+      <button class="btn primary" type="submit" id="m-save">Kaydet</button>
+    </footer>
+  </form>
+</dialog>
 
 <!-- Ekle / düzenle -->
 <dialog id="edlg">
@@ -527,13 +574,14 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>',
     image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
     pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+    team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14c2.3.2 4 1.7 4.5 4.2"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
   };
   document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = I[el.dataset.icon]; });
 
-  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", gundem: "Gündem", haber: "Haber" };
+  const TYPES = { etkinlik: "Etkinlik", duyuru: "Duyuru", gundem: "Gündem", haber: "Haber", uye: "Yönetim" };
   const isPost = (t) => t === "haber" || t === "gundem";
-  const TAB_TYPE = { etkinlikler: "etkinlik", duyurular: "duyuru", haberler: "haber", gundem: "gundem" };
+  const TAB_TYPE = { etkinlikler: "etkinlik", duyurular: "duyuru", haberler: "haber", gundem: "gundem", yonetim: "uye" };
 
   /* ---------- tarih yardımcıları ---------- */
   const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -558,7 +606,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   let items = [], tab = "gundem", query = "", showPast = { etkinlik: false, duyuru: false };
   let db = null, mode = "local", editing = null, viewing = null, imgData = "", siteIg = "";
   const typeOf = (a) => TYPES[a.type] ? a.type : "duyuru";
-  const TABS = ["gundem", "duyurular", "haberler"];
+  const TABS = ["gundem", "duyurular", "haberler", "yonetim"];
   let route = { page: "tab", tab: "gundem" }, editorKey = null, assets = null, ed = null, lbList = [], lbIdx = 0;
   const photosOf = (a) => Array.isArray(a.photos) && a.photos.length ? a.photos : (a.image ? [{ data: a.image }] : []);
   const srcOf = (p) => p.asset ? "/_blob/" + p.asset : (p.data || p.tmp || "");
@@ -945,6 +993,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
         gundemFeed();
     } else if (tab === "etkinlikler") html = todayBanner() + listPanel("etkinlik");
     else if (tab === "duyurular") html = listPanel("duyuru");
+    else if (tab === "yonetim") html = teamPage();
     else html = newsPage();
     $("main").innerHTML = html;
   }
@@ -1075,6 +1124,85 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
   }
 
   /* ---------- olaylar ---------- */
+  /* ---------- Yönetim ekibi ---------- */
+  const initials = (n) => (n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toLocaleUpperCase("tr");
+  const team = () => items.filter((a) => typeOf(a) === "uye" && matches(a)).sort((x, y) => ((+x.order || 999) - (+y.order || 999)) || addedAt(x).localeCompare(addedAt(y)));
+  function memberCard(a) {
+    const ph = photosOf(a)[0];
+    const admin = document.body.classList.contains("is-admin");
+    const tag = admin ? "button" : "div";
+    return `<${tag} class="member"${admin ? ` type="button" data-uye="${esc(a.id)}"` : ""}>
+      ${ph ? `<img class="mph" src="${esc(fullSrc(ph))}" alt="${esc(a.title)}" loading="lazy">` : `<span class="mini" aria-hidden="true">${esc(initials(a.title))}</span>`}
+      <span class="mb"><span class="mn">${esc(a.title)}</span>${a.role ? `<span class="mr">${esc(a.role)}</span>` : ""}</span></${tag}>`;
+  }
+  function teamPage() {
+    const t = team();
+    return `<div class="page-head"><div><h1>Yönetim</h1><span class="muted">${t.length ? t.length + " kişi" : ""}</span></div>
+      <button class="btn primary admin-only" type="button" data-uye-add="1">${I.team}Kişi ekle</button></div>` +
+      (t.length ? `<div class="team">${t.map(memberCard).join("")}</div>` : `<section class="panel">${emptyBox(query ? "Aramaya uyan kişi yok." : "Yönetim ekibi henüz eklenmedi.")}</section>`);
+  }
+  let mEditing = null, mPhoto = null;
+  function mPreview() {
+    const src = mPhoto ? fullSrc(mPhoto) : "";
+    $("m-prev").hidden = !src; $("m-ini").hidden = !!src; if (src) $("m-prev").src = src;
+    $("m-ini").textContent = initials($("m-name").value); $("m-clear").hidden = !src;
+  }
+  function openMember(a) {
+    mEditing = a || null;
+    $("m-h").textContent = a ? "Kişiyi düzenle" : "Yönetim ekibine ekle";
+    $("m-name").value = a?.title || ""; $("m-role").value = a?.role || ""; $("m-order").value = a?.order || "";
+    mPhoto = a ? (photosOf(a)[0] || null) : null;
+    $("m-err").hidden = true;
+    const d = $("m-del"); d.hidden = !a; d.classList.remove("sure"); d.textContent = "Sil"; d.disabled = false;
+    mPreview(); $("mdlg").showModal(); $("m-name").focus();
+  }
+  $("m-name").addEventListener("input", mPreview);
+  $("m-clear").onclick = () => { mPhoto = null; mPreview(); };
+  $("m-file").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const c = await shrink(f, 700);
+      let q = 0.8, out = c.toDataURL("image/jpeg", q);
+      while (out.length > 220000 && q > 0.35) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+      mPhoto = { data: out, thumb: out, fresh: true }; mPreview();
+    } catch (er) { $("m-err").textContent = "Bu fotoğraf açılamadı, başka bir dosya dene."; $("m-err").hidden = false; }
+  });
+  $("mform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("m-name").value.trim();
+    if (!name) { $("m-err").textContent = "Ad Soyad boş olamaz."; $("m-err").hidden = false; $("m-name").focus(); return; }
+    const btn = $("m-save"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
+    try {
+      const id = mEditing ? mEditing.id : newId();
+      let photos = [];
+      if (mPhoto) {
+        if (mPhoto.fresh && mode === "gh") {
+          const path = "photos/uye-" + id + "-" + Date.now().toString(36) + ".jpg";
+          await ghPut(path, mPhoto.data.split(",")[1], "Yönetim fotoğrafı yüklendi");
+          window.__localImg[path] = mPhoto.data;
+          photos = [{ data: path, thumb: path }];
+        } else photos = [{ data: mPhoto.data, thumb: mPhoto.thumb || mPhoto.data }];
+      }
+      const now = new Date().toISOString();
+      const old = mEditing ? photosOf(mEditing)[0] : null;
+      const a = { id, type: "uye", title: name, role: $("m-role").value.trim(), order: $("m-order").value ? +$("m-order").value : "", photos, createdAt: (mEditing && mEditing.createdAt) || now, updatedAt: now };
+      await saveItem(a);
+      if (mode === "gh" && old && typeof old.data === "string" && old.data.startsWith("photos/") && !(photos[0] && photos[0].data === old.data)) ghDel(old.data, "Eski yönetim fotoğrafı silindi").catch(() => {});
+      $("mdlg").close(); render();
+    } catch (er) { $("m-err").textContent = "Kaydedilemedi, internet bağlantını kontrol edip tekrar dene."; $("m-err").hidden = false; }
+    finally { btn.disabled = false; btn.textContent = "Kaydet"; }
+  });
+  $("m-del").onclick = async () => {
+    const d = $("m-del");
+    if (!d.classList.contains("sure")) { d.classList.add("sure"); d.textContent = "Emin misin? Sil"; return; }
+    d.disabled = true;
+    try { await removeItem(mEditing.id); $("mdlg").close(); render(); } catch (er) { d.disabled = false; d.textContent = "Silinemedi"; }
+  };
+  document.addEventListener("click", (e) => {
+    const u = e.target.closest("#main [data-uye]"); if (u) { const a = items.find((x) => x.id === u.dataset.uye); if (a) openMember(a); return; }
+    if (e.target.closest("[data-uye-add]")) openMember(null);
+  });
+
   /* ---------- sağ üst menü ---------- */
   const MI = {
     ig: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>',
@@ -1089,6 +1217,7 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
       <button class="menu-item" type="button" role="menuitem" data-go="gundem"${cur("gundem")}>${I.home}Gündem</button>
       <button class="menu-item" type="button" role="menuitem" data-go="duyurular"${cur("duyurular")}>${I.duyuru}Duyurular</button>
       <button class="menu-item" type="button" role="menuitem" data-go="haberler"${cur("haberler")}>${I.haber}Haberler</button>
+      <button class="menu-item" type="button" role="menuitem" data-go="yonetim"${cur("yonetim")}>${I.team}Yönetim</button>
       ${siteIg ? `<a class="menu-item" role="menuitem" href="https://www.instagram.com/${encodeURIComponent(siteIg)}/" target="_blank" rel="noopener">${MI.ig}Instagram'da takip et</a>` : ""}
     </div>`;
     if (admin && $("logout-btn")) {
@@ -1096,9 +1225,10 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
         <button class="menu-item" type="button" role="menuitem" data-nav="gundem-yaz">${MI.plus}Gündeme yaz</button>
         <button class="menu-item" type="button" role="menuitem" data-nav="haber-yaz">${MI.plus}Haber yaz</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="duyuru">${MI.plus}Duyuru ekle</button>
+        <button class="menu-item" type="button" role="menuitem" data-menu="uye">${MI.plus}Yönetime kişi ekle</button>
         <button class="menu-item" type="button" role="menuitem" data-menu="logout">${MI.out}Çıkış yap</button></div>`;
     } else if ($("login-btn")) {
-      h += `<div class="menu-sec"><button class="menu-item brand" type="button" role="menuitem" data-menu="login">${MI.key}Yönetim</button></div>`;
+      h += `<div class="menu-sec"><button class="menu-item subtle" type="button" role="menuitem" data-menu="login">${MI.key}Yönetici girişi</button></div>`;
     }
     return h;
   }
@@ -1119,12 +1249,13 @@ dialog.lb::backdrop { background: rgba(0,0,0,.94); backdrop-filter: none; }
     if (act === "login") $("login-btn").click();
     else if (act === "logout") $("logout-btn").click();
     else if (act === "duyuru") openForm(null, "duyuru");
+    else if (act === "uye") { setTab("yonetim"); openMember(null); }
   });
   document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu") && !e.target.closest("#menu-btn")) closeMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("menu").hidden) { closeMenu(); $("menu-btn").focus(); } });
   window.addEventListener("resize", closeMenu);
 
-  const addNew = () => openForm(null, TAB_TYPE[tab] || "haber");
+  const addNew = () => (tab === "yonetim" && route.page === "tab") ? openMember(null) : openForm(null, TAB_TYPE[tab] || "haber");
   $("add-btn").onclick = addNew; $("fab").onclick = addNew;
   $("search").addEventListener("input", (e) => { query = e.target.value.trim().toLocaleLowerCase("tr"); render(); });
   $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
