@@ -221,7 +221,16 @@ rep('  if (window.claude && window.claude.use) startDb(); else startLocal();',
     const k = $("t-key").value.trim(); if (!k) return;
     const btn = $("t-go"); btn.disabled = true; ghToken = k;
     try { await enterGh(); try { localStorage.setItem("gp-gh-token", k); } catch (er) {} $("tdlg").close(); $("t-key").value = ""; toast("Yönetici modu açıldı. Artık ekleyip düzenleyebilirsin."); }
-    catch (er) { ghToken = ""; $("t-err").textContent = er.message === "no-push" ? "Bu anahtarın siteye yazma izni yok." : "Anahtar geçersiz ya da süresi dolmuş."; $("t-err").hidden = false; }
+    catch (er) {
+      ghToken = "";
+      $("t-err").textContent =
+        er.message === "no-push" ? "Bu anahtar çalışıyor ama bu GitHub hesabının siteye yazma izni yok. Site sahibi bu hesabı zaferpartisihaber organizasyonuna Write yetkisiyle eklemeli." :
+        er.status === 401 ? "Anahtar geçersiz ya da silinmiş. ghp_ ile başlayan anahtarın tamamını kopyala-yapıştır yap; elle yazınca bir harf kolayca karışıyor." :
+        er.status === 403 ? "GitHub bu anahtarı reddetti (izin ya da kullanım sınırı). Biraz sonra tekrar dene; olmazsa yeni anahtar al." :
+        !er.status ? "GitHub'a bağlanılamadı. İnternet bağlantını kontrol et; Instagram'ın içinden açtıysan siteyi Safari ya da Chrome'da aç." :
+        "Giriş yapılamadı (hata " + er.status + ").";
+      $("t-err").hidden = false;
+    }
     finally { btn.disabled = false; }
   });
 
